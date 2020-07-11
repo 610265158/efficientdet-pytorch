@@ -202,32 +202,20 @@ def generate_detections(
 
     # apply bounding box regression to anchors
     boxes = decode_box_outputs(box_outputs.float(), anchor_boxes, output_xyxy=True)
-    boxes = clip_boxes_xyxy(boxes, img_size / img_scale)  # clip before NMS better?
 
     scores = cls_outputs.sigmoid().squeeze(1).float()
-    top_detection_idx = batched_nms(boxes, scores, classes, iou_threshold=0.5)
-
-    # keep only topk scoring predictions
-    top_detection_idx = top_detection_idx[:max_det_per_image]
-    boxes = boxes[top_detection_idx]
-    scores = scores[top_detection_idx, None]
-    classes = classes[top_detection_idx, None]
 
     # xyxy to xywh & rescale to original image
-    boxes[:, 2] -= boxes[:, 0]
-    boxes[:, 3] -= boxes[:, 1]
-    boxes *= img_scale
+    # boxes[:, 2] -= boxes[:, 0]
+    # boxes[:, 3] -= boxes[:, 1]
+
 
     classes += 1  # back to class idx with background class = 0
-
+    scores=torch.unsqueeze(scores,dim=1)
+    classes = torch.unsqueeze(classes, dim=1)
     # stack em and pad out to MAX_DETECTIONS_PER_IMAGE if necessary
     detections = torch.cat([boxes, scores, classes.float()], dim=1)
-    if len(top_detection_idx) < max_det_per_image:
-        detections = torch.cat([
-            detections,
-            torch.zeros(
-                (max_det_per_image - len(top_detection_idx), 6), device=detections.device, dtype=detections.dtype)
-        ], dim=0)
+
     return detections
 
 
@@ -265,7 +253,7 @@ class Anchors(nn.Module):
         self.anchor_scale = anchor_scale
         self.image_size = image_size
         self.config = self._generate_configs()
-        self.register_buffer('boxes', self._generate_boxes())
+        self.boxes= self._generate_boxes().cuda()
 
     def _generate_configs(self):
         """Generate configurations of anchor boxes."""

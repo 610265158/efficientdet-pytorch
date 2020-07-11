@@ -64,12 +64,14 @@ class DetBenchPredict(nn.Module):
         super(DetBenchPredict, self).__init__()
         self.config = config
         self.model = model
-        self.anchors = Anchors(
-            config.min_level, config.max_level,
-            config.num_scales, config.aspect_ratios,
-            config.anchor_scale, config.image_size)
 
-    def forward(self, x, img_scales, img_size):
+
+    def forward(self, x, img_scales, img_size,rect_size):
+        self.anchors = Anchors(
+            self.config.min_level, self.config.max_level,
+            self.config.num_scales, self.config.aspect_ratios,
+            self.config.anchor_scale, rect_size)
+
         class_out, box_out = self.model(x)
         class_out, box_out, indices, classes = _post_process(self.config, class_out, box_out)
         return _batch_detection(
@@ -94,12 +96,12 @@ class DetBenchTrain(nn.Module):
             x.shape[0], target['bbox'], target['cls'])
         loss, class_loss, box_loss = self.loss_fn(class_out, box_out, cls_targets, box_targets, num_positives)
         output = dict(loss=loss, class_loss=class_loss, box_loss=box_loss)
-        if not self.training:
-            # if eval mode, output detections for evaluation
-            class_out, box_out, indices, classes = _post_process(self.config, class_out, box_out)
-            output['detections'] = _batch_detection(
-                x.shape[0], class_out, box_out, self.anchors.boxes, indices, classes,
-                target['img_scale'], target['img_size'])
+        # if not self.training:
+        #     # if eval mode, output detections for evaluation
+        #     class_out, box_out, indices, classes = _post_process(self.config, class_out, box_out)
+        #     output['detections'] = _batch_detection(
+        #         x.shape[0], class_out, box_out, self.anchors.boxes, indices, classes,
+        #         target['img_scale'], target['img_size'])
         return output
 
 
