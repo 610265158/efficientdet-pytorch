@@ -99,8 +99,8 @@ class FasterRcnnBoxCoder(object):
 
         tx = (xcenter - xcenter_a) / wa
         ty = (ycenter - ycenter_a) / ha
-        tw = torch.log(w / wa)
-        th = torch.log(h / ha)
+        tw = (w / wa)
+        th = (h / ha)
         # Scales location targets as used in paper for joint training.
         if self._scale_factors is not None:
             ty *= self._scale_factors[0]

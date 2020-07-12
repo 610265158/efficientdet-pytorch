@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import numpy as np
 from typing import Optional, List
+
+from effdet.anchors import decode_box_outputs
 
 
 def focal_loss(logits, targets, alpha: float, gamma: float, normalizer):
@@ -107,16 +109,93 @@ def _classification_loss(cls_outputs, cls_targets, num_positives, alpha: float =
     return classification_loss
 
 
-def _box_loss(box_outputs, box_targets, num_positives, delta: float = 0.1):
+# def _box_loss(anchor_boxes,box_outputs, box_targets, num_positives, delta: float = 0.1):
+#     """Computes box regression loss."""
+#     # delta is typically around the mean value of regression target.
+#     # for instances, the regression targets of 512x512 input with 6 anchors on
+#     # P3-P7 pyramid is about [0.1, 0.1, 0.2, 0.2].
+#     normalizer = num_positives * 4.0
+#     mask = box_targets != 0.0
+#     box_loss = huber_loss(box_targets, box_outputs, weights=mask, delta=delta, size_average=False)
+#
+#     box_loss /= normalizer
+#
+#     return box_loss
+
+def _box_loss(anchor_boxes,box_outputs, box_targets, num_positives,cls_targets_non_neg, delta: float = 0.1):
     """Computes box regression loss."""
     # delta is typically around the mean value of regression target.
     # for instances, the regression targets of 512x512 input with 6 anchors on
     # P3-P7 pyramid is about [0.1, 0.1, 0.2, 0.2].
-    normalizer = num_positives * 4.0
-    mask = box_targets != 0.0
-    box_loss = huber_loss(box_targets, box_outputs, weights=mask, delta=delta, size_average=False)
-    box_loss /= normalizer
+    # normalizer = num_positives * 4.0
+    # mask = box_targets != 0.0
+    # box_loss = huber_loss(box_targets, box_outputs, weights=mask, delta=delta, size_average=False)
+    # box_loss /= normalizer
+    box_loss = ciou_loss(anchor_boxes,box_outputs,box_targets,cls_targets_non_neg)
+
+
     return box_loss
+
+def ciou_loss(anchor_boxes,box_outputs, box_targets,weights,avg_factor=None):
+
+
+
+    bs=box_outputs.shape[0]
+
+    for i in range(bs):
+        box_outputs[i] = decode_box_outputs(box_outputs[i], anchor_boxes, output_xyxy=True)
+        box_targets[i] = decode_box_outputs(box_targets[i], anchor_boxes, output_xyxy=True)
+
+    pos_mask=weights>0
+
+    if avg_factor is None:
+        avg_factor = torch.sum(pos_mask) + 1e-6
+
+
+    bboxes1 =box_outputs[pos_mask,...].view(-1, 4).float()
+    bboxes2 = box_targets[pos_mask,...].view(-1, 4).float()
+
+
+    lt = torch.max(bboxes1[:, :2], bboxes2[:, :2])  # [rows, 2]
+    rb = torch.min(bboxes1[:, 2:], bboxes2[:, 2:])  # [rows, 2]
+    wh = (rb - lt + 1).clamp(min=0)  # [rows, 2]
+    # enclose_x1y1 = torch.min(bboxes1[:, :2], bboxes2[:, :2])
+    # enclose_x2y2 = torch.max(bboxes1[:, 2:], bboxes2[:, 2:])
+    # enclose_wh =  torch.max((enclose_x2y2 - enclose_x1y1 + 1),0)
+
+    overlap = wh[:, 0] * wh[:, 1]
+    ap = (bboxes1[:, 2] - bboxes1[:, 0] + 1) * (bboxes1[:, 3] - bboxes1[:, 1] + 1)
+    ag = (bboxes2[:, 2] - bboxes2[:, 0] + 1) * (bboxes2[:, 3] - bboxes2[:, 1] + 1)
+    ious = overlap / (ap + ag - overlap)
+
+    # cal outer boxes
+    outer_left_up = torch.min(bboxes1[:, :2], bboxes2[:, :2])
+    outer_right_down = torch.max(bboxes1[:, 2:], bboxes2[:, 2:])
+    outer = (outer_right_down - outer_left_up).clamp(min=0)
+    outer_diagonal_line = (outer[:, 0])**2 + (outer[:, 1])**2
+
+
+    boxes1_center = (bboxes1[:, :2] + bboxes1[:, 2:]+ 1) * 0.5
+    boxes2_center = (bboxes2[:, :2] + bboxes2[:, 2:]+ 1) * 0.5
+    center_dis = (boxes1_center[:, 0] - boxes2_center[:, 0])**2 + \
+                 (boxes1_center[:, 1] - boxes2_center[:, 1])**2
+
+    boxes1_size =(bboxes1[:,2:]-bboxes1[:,:2]).clamp(min=0)
+    boxes2_size = (bboxes2[:, 2:] - bboxes2[:, :2]).clamp(min=0)
+
+    v = (4.0 / (np.pi**2)) * \
+        ((torch.atan(boxes2_size[:, 0] / (boxes2_size[:, 1]+0.00001)) -
+                    torch.atan(boxes1_size[:, 0] / (boxes1_size[:, 1]+0.00001)))**2)
+
+    S = (ious >0.5).float()
+    alpha = S * v / (1 - ious + v)
+
+    cious = ious - (center_dis / outer_diagonal_line)-alpha * v
+
+    cious = 1-cious
+
+    return torch.sum(cious ) / avg_factor
+
 
 
 class DetectionLoss(nn.Module):
@@ -129,9 +208,13 @@ class DetectionLoss(nn.Module):
         self.delta = config.delta
         self.box_loss_weight = config.box_loss_weight
 
-    def forward(
-            self, cls_outputs: List[torch.Tensor], box_outputs: List[torch.Tensor],
-            cls_targets: List[torch.Tensor], box_targets: List[torch.Tensor], num_positives: torch.Tensor):
+    def forward(self,
+                anchor_boxes,
+                cls_outputs: List[torch.Tensor],
+                box_outputs: List[torch.Tensor],
+                cls_targets: List[torch.Tensor],
+                box_targets: List[torch.Tensor],
+                num_positives: torch.Tensor):
         """Computes total detection loss.
         Computes total detection loss including box and class loss from all levels.
         Args:
@@ -161,33 +244,64 @@ class DetectionLoss(nn.Module):
 
         cls_losses = []
         box_losses = []
+
+        ####
+
+        cls_outputs_all=[]
+        box_outputs_all=[]
+        cls_targets_all=[]
+        box_targetsall=[]
+
+
+        bs=cls_outputs[0].shape[0]
+
         for l in range(levels):
-            cls_targets_at_level = cls_targets[l]
-            box_targets_at_level = box_targets[l]
+            cls_outputs[l]=cls_outputs[l].permute(0, 2, 3, 1)
+            cls_output_at_level=cls_outputs[l].reshape(bs,-1)
+            box_outputs[l]=box_outputs[l].permute(0, 2, 3, 1)
+            box_output_at_level=box_outputs[l].reshape(bs,-1, 4)
 
-            # Onehot encoding for classification labels.
-            # NOTE: PyTorch one-hot does not handle -ve entries (no hot) like Tensorflow, so mask them out
-            cls_targets_non_neg = cls_targets_at_level >= 0
-            cls_targets_at_level_oh = F.one_hot(cls_targets_at_level * cls_targets_non_neg, self.num_classes)
-            cls_targets_at_level_oh = torch.where(
-               cls_targets_non_neg.unsqueeze(-1), cls_targets_at_level_oh, torch.zeros_like(cls_targets_at_level_oh))
+            cls_outputs_all.append(cls_output_at_level)
+            box_outputs_all.append(box_output_at_level)
 
-            bs, height, width, _, _ = cls_targets_at_level_oh.shape
-            cls_targets_at_level_oh = cls_targets_at_level_oh.view(bs, height, width, -1)
-            cls_loss = _classification_loss(
-                cls_outputs[l].permute(0, 2, 3, 1),
-                cls_targets_at_level_oh,
-                num_positives_sum,
-                alpha=self.alpha, gamma=self.gamma)
-            cls_loss = cls_loss.view(bs, height, width, -1, self.num_classes)
-            cls_loss *= (cls_targets_at_level != -2).unsqueeze(-1).float()
-            cls_losses.append(cls_loss.sum())
+            cls_targets_at_level = cls_targets[l].reshape(bs,-1)
+            box_targets_at_level= box_targets[l].reshape(bs,-1, 4)
 
-            box_losses.append(_box_loss(
-                box_outputs[l].permute(0, 2, 3, 1),
-                box_targets_at_level,
-                num_positives_sum,
-                delta=self.delta))
+            cls_targets_all.append(cls_targets_at_level)
+            box_targetsall.append(box_targets_at_level)
+
+
+        cls_outputs_all=torch.cat(cls_outputs_all, dim=1)
+        box_outputs_all = torch.cat(box_outputs_all, dim=1)
+        cls_targets_all = torch.cat(cls_targets_all, dim=1)
+        box_targetsall = torch.cat(box_targetsall, dim=1)
+
+
+        # Onehot encoding for classification labels.
+        # NOTE: PyTorch one-hot does not handle -ve entries (no hot) like Tensorflow, so mask them out
+        cls_targets_non_neg = cls_targets_all >= 0
+        cls_targets_all_oh = F.one_hot(cls_targets_all * cls_targets_non_neg, self.num_classes)
+        cls_targets_all_oh = torch.where(
+           cls_targets_non_neg.unsqueeze(-1), cls_targets_all_oh, torch.zeros_like(cls_targets_all_oh))
+
+        bs,_, _ = cls_targets_all_oh.shape
+        cls_targets_all_oh = cls_targets_all_oh.view(bs,  -1)
+        cls_loss = _classification_loss(
+            cls_outputs_all,
+            cls_targets_all_oh,
+            num_positives_sum,
+            alpha=self.alpha, gamma=self.gamma)
+        cls_loss = cls_loss.view(bs, -1, self.num_classes)
+        cls_loss *= (cls_targets_all != -2).unsqueeze(-1).float()
+        cls_losses.append(cls_loss.sum())
+
+        box_losses.append(_box_loss(
+            anchor_boxes,
+            box_outputs_all,
+            box_targetsall,
+            num_positives_sum,
+            cls_targets_non_neg,
+            delta=self.delta))
 
         # Sum per level losses to total loss.
         cls_loss = torch.sum(torch.stack(cls_losses, dim=-1), dim=-1)

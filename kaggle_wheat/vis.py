@@ -12,7 +12,7 @@ from lib.core.api import Detector
 data_dir='../global-wheat-detection/test'
 
 
-model_path='./models/epoch_99_val_loss0.410587.pth'
+model_path='./models/epoch_18_val_loss1.936444.pth'
 
 
 image_list=os.listdir(data_dir)

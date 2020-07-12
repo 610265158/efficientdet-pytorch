@@ -41,9 +41,9 @@ config.TRAIN.vis=False
 config.TRAIN.mix_precision=True
 
 
-config.TRAIN.warmup_step=-1000
+config.TRAIN.warmup_step=1000
 config.TRAIN.opt='Adamw'
-
+config.TRAIN.ema=False
 
 
 config.DATA = edict()
@@ -57,8 +57,8 @@ config.DATA.win = 640
 
 config.DATA.IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
 config.DATA.IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
-config.DATA.max_boxes=150
-config.DATA.cover_obj=4
+config.DATA.max_boxes=200
+config.DATA.cover_obj=10
 config.MODEL = edict()
 config.MODEL.model_path = './models/'                                        ## save directory
 

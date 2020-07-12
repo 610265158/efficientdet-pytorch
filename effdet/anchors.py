@@ -67,8 +67,8 @@ def decode_box_outputs(rel_codes, anchors, output_xyxy: bool=False):
 
     ty, tx, th, tw = rel_codes.unbind(dim=1)
 
-    w = torch.exp(tw) * wa
-    h = torch.exp(th) * ha
+    w = (tw) * wa
+    h = (th) * ha
     ycenter = ty * ha + ycenter_a
     xcenter = tx * wa + xcenter_a
     ymin = ycenter - h / 2.
