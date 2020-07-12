@@ -47,25 +47,22 @@ class Train(object):
     self.device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 
     config = get_efficientdet_config('tf_efficientdet_d2')
+    config.num_classes=1
+    config.image_size = cfg.DATA.hin
+
     net = EfficientDet(config, pretrained_backbone=False)
 
 
-    config.num_classes = 1
-    config.image_size = cfg.DATA.hin
-    net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
-
     checkpoint = torch.load('./tf_efficientdet_d2.pth')
-
-    for k, v in checkpoint.items():
-        if 'predict' in k:
-            print(k)
+    #
+    # for k, v in checkpoint.items():
+    #     if 'predict' in k:
+    #         print(k)
     checkpoint.pop('class_net.predict.conv_dw.weight')
     checkpoint.pop('class_net.predict.conv_pw.weight')
     checkpoint.pop('class_net.predict.conv_pw.bias')
 
-    net.load_state_dict(checkpoint, strict=False)
-
-
+    net.load_state_dict(checkpoint,strict=False)
 
     self.model = DetBenchTrain(net, config)
 
@@ -132,7 +129,7 @@ class Train(object):
                       m.bias.requires_grad = False
       for step in range(self.train_ds.size):
 
-        if epoch_num<2:
+        if epoch_num<10:
             ###excute warm up in the first epoch
             if self.warup_step>0:
                 if self.iter_num < self.warup_step:
