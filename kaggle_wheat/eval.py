@@ -13,7 +13,7 @@ from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
 from train_config import config as cfg
-from lib.core.api.face_detector import FaceDetector
+from lib.core.api import Detector
 
 
 
@@ -23,10 +23,9 @@ ap.add_argument("--annFile", required=False, default='./Val_cocoStyle.json', hel
 ap.add_argument("--is_show", required=False, default=0,type=int, help="show result or not?")
 args = ap.parse_args()
 
-MODEL_PATH = args.model
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-detector = FaceDetector(['./model/detector.pb'])
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 coco_map = {0: (1, 'person'), 1: (2, 'bicycle'), 2: (3, 'car'), 3: (4, 'motorcycle'), 4: (5, 'airplane'), 5: (6, 'bus'),
             6: (7, 'train'), 7: (8, 'truck'), 8: (9, 'boat'), 9: (10, 'traffic light'), 10: (11, 'fire hydrant'),
             11: (13, 'stop sign'), 12: (14, 'parking meter'), 13: (15, 'bench'), 14: (16, 'bird'), 15: (17, 'cat'),
@@ -48,6 +47,8 @@ coco_map = {0: (1, 'person'), 1: (2, 'bicycle'), 2: (3, 'car'), 3: (4, 'motorcyc
 
 
 def predict_box():
+    MODEL_PATH = args.model
+    detector = Detector(MODEL_PATH)
     annFile = args.annFile
     cocoGt = COCO(annFile)
     catIds = cocoGt.getCatIds()
@@ -63,26 +64,39 @@ def predict_box():
 
 
         image = cv2.imread(fname)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        h, w, _ = image.shape
         image_show = image.copy()
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        detect_res =detector(image,0.5)
+
+
+        h, w, _ = image.shape
+
+
+        detect_res =detector(image,640,iou_thres=0.5,score_thres=0.03)
+
+
+
+        ##recover to raw size
+
+
 
         if args.is_show:
             for i in range(detect_res.shape[0]):
                 one_box = detect_res[i]
                 str_draw = ' score:' + str(one_box[4])
-                cv2.rectangle(image_show, (int(one_box[0]), int(one_box[1])), (int(one_box[2]), int(one_box[3])),
-                              (0, 255, 0), 2)
-                cv2.putText(image_show, str_draw, (int(one_box[0]), int(one_box[1])), cv2.FONT_HERSHEY_SIMPLEX, 2,
-                            (0, 255, 0), 3)
+                if one_box[4]>0.3:
+                    cv2.rectangle(image_show, (int(one_box[0]), int(one_box[1])), (int(one_box[2]), int(one_box[3])),
+                                  (0, 255, 0), 2)
+                    cv2.putText(image_show, str_draw, (int(one_box[0]), int(one_box[1])), cv2.FONT_HERSHEY_SIMPLEX, 2,
+                                (0, 255, 0), 3)
             cv2.namedWindow('ss',0)
             cv2.imshow('ss', image_show)
             cv2.waitKey(0)
 
         for i in range(detect_res.shape[0]):
             one_box = detect_res[i]
+
+
             one_box=[float(x) for x in one_box]
             box = [one_box[0], one_box[1], one_box[2] - one_box[0], one_box[3] - one_box[1]]
             res_coco.append({

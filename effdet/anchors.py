@@ -167,7 +167,7 @@ def clip_boxes_xyxy(boxes: torch.Tensor, size: torch.Tensor):
 
 
 def generate_detections(
-        cls_outputs, box_outputs, anchor_boxes, indices, classes, img_scale, img_size,
+        cls_outputs, box_outputs, anchor_boxes, indices, classes,
         max_det_per_image: int = MAX_DETECTIONS_PER_IMAGE):
     """Generates detections with RetinaNet model outputs and anchors.
 
