@@ -282,177 +282,151 @@ class DsfdDataIter():
 
         return all_samples
 
-    def _map_func(self,dp,is_training):
-        """Data augmentation function."""
-        ####customed here
-        try:
-            fname, annos = dp
-            image = cv2.imread(fname, cv2.IMREAD_COLOR)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            labels = annos.split(' ')
-            boxes = []
 
 
-            for label in labels:
-                bbox = np.array(label.split(','), dtype=np.float)
-                boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]])
+    def _sample(self,dp,is_training):
+        pass
 
-            boxes = np.array(boxes, dtype=np.float)
+    def cv2_read_rgb(self,fname):
+        image = cv2.imread(fname, cv2.IMREAD_COLOR)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image
 
+    def align_and_resize(self, image, boxes):
+        boxes_ = boxes[:, 0:4]
+        klass_ = boxes[:, 4:]
+        image, shift_x, shift_y = Fill_img(image, target_width=cfg.DATA.win, target_height=cfg.DATA.hin)
+        boxes_[:, 0:4] = boxes_[:, 0:4] + np.array([shift_x, shift_y, shift_x, shift_y], dtype='float32')
+        h, w, _ = image.shape
+        boxes_[:, 0] /= w
+        boxes_[:, 1] /= h
+        boxes_[:, 2] /= w
+        boxes_[:, 3] /= h
+        image = image.astype(np.uint8)
+        image = cv2.resize(image, (cfg.DATA.win, cfg.DATA.hin))
 
-            if is_training:
+        boxes_[:, 0] *= cfg.DATA.win
+        boxes_[:, 1] *= cfg.DATA.hin
+        boxes_[:, 2] *= cfg.DATA.win
+        boxes_[:, 3] *= cfg.DATA.hin
+        image = image.astype(np.uint8)
+        boxes = np.concatenate([boxes_, klass_], axis=1)
 
-                sample_dice = random.uniform(0, 1)
-                if sample_dice > 0.75 and sample_dice <= 1:
-                    image, boxes = Random_scale_withbbox(image, boxes, target_shape=[cfg.DATA.hin, cfg.DATA.win],
-                                                         jitter=0.3)
-                elif sample_dice > 0.5 and sample_dice <= 0.75:
-                    boxes_ = boxes[:, 0:4]
-                    klass_ = boxes[:, 4:]
+        return image, boxes
 
-                    image, boxes_, klass_ = dsfd_aug(image, boxes_, klass_)
+    def simple_sample(self,dp):
+        fname, annos = dp
+        image = self.cv2_read_rgb(fname)
+        labels = annos.split(' ')
+        boxes = []
 
-                    image = image.astype(np.uint8)
-                    boxes = np.concatenate([boxes_, klass_], axis=1)
-                elif sample_dice > 0.25 and sample_dice <= 0.5:
-                    boxes_ = boxes[:, 0:4]
-                    klass_ = boxes[:, 4:]
-                    image, boxes_, klass_ = baidu_aug(image, boxes_, klass_)
+        for label in labels:
+            bbox = np.array(label.split(','), dtype=np.float)
+            boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]])
 
-                    image = image.astype(np.uint8)
-                    boxes = np.concatenate([boxes_, klass_], axis=1)
-                else:
-                    pass
+        boxes = np.array(boxes, dtype=np.float)
 
-                if random.uniform(0, 1) > 0.5:
-                    image, boxes = Random_flip(image, boxes)
+        image, boxes = self.align_and_resize(image, boxes)
 
-                if random.uniform(0, 1) > 0.5:
-                    boxes_ = boxes[:, 0:4]
-                    klass_ = boxes[:, 4:]
-                    angel=random.choice([90,180,270])
-
-                    image, boxes_ = Rotate_with_box(image,angel, boxes_)
-                    boxes = np.concatenate([boxes_, klass_], axis=1)
-
-
-
-
-                if random.uniform(0, 1) > 0.5:
-                    image =self.color_augmentor(image)
-
-                boxes_ = boxes[:, 0:4]
-                klass_ = boxes[:, 4:]
-                image, shift_x, shift_y = Fill_img(image, target_width=cfg.DATA.win, target_height=cfg.DATA.hin)
-                boxes_[:, 0:4] = boxes_[:, 0:4] + np.array([shift_x, shift_y, shift_x, shift_y], dtype='float32')
-                h, w, _ = image.shape
-                boxes_[:, 0] /= w
-                boxes_[:, 1] /= h
-                boxes_[:, 2] /= w
-                boxes_[:, 3] /= h
-                image = image.astype(np.uint8)
-                image = cv2.resize(image, (cfg.DATA.win, cfg.DATA.hin))
-
-                boxes_[:, 0] *= cfg.DATA.win
-                boxes_[:, 1] *= cfg.DATA.hin
-                boxes_[:, 2] *= cfg.DATA.win
-                boxes_[:, 3] *= cfg.DATA.hin
-                image = image.astype(np.uint8)
-                boxes = np.concatenate([boxes_, klass_], axis=1)
-
-                if random.uniform(0, 1) < cfg.DATA.cracy_crop:
-                    image,boxes=self.crazy_crop(image, boxes)
-
-                if random.uniform(0, 1) > 0.5:
-                    image =pixel_jitter(image,15)
-            else:
-                boxes_ = boxes[:, 0:4]
-                klass_ = boxes[:, 4:]
-                image, shift_x, shift_y = Fill_img(image, target_width=cfg.DATA.win, target_height=cfg.DATA.hin)
-                boxes_[:, 0:4] = boxes_[:, 0:4] + np.array([shift_x, shift_y, shift_x, shift_y], dtype='float32')
-                h, w, _ = image.shape
-                boxes_[:, 0] /= w
-                boxes_[:, 1] /= h
-                boxes_[:, 2] /= w
-                boxes_[:, 3] /= h
-                image = image.astype(np.uint8)
-                image = cv2.resize(image, (cfg.DATA.win, cfg.DATA.hin))
-
-                boxes_[:, 0] *= cfg.DATA.win
-                boxes_[:, 1] *= cfg.DATA.hin
-                boxes_[:, 2] *= cfg.DATA.win
-                boxes_[:, 3] *= cfg.DATA.hin
-                image = image.astype(np.uint8)
-                boxes = np.concatenate([boxes_, klass_], axis=1)
+        if random.uniform(0, 1) > 0.5:
+            image, boxes = Random_flip(image, boxes)
 
 
+        boxes_ = boxes[:, 0:4]
+        klass_ = boxes[:, 4:]
+        angel = random.choice([0, 90, 180, 270])
+
+        image, boxes_ = Rotate_with_box(image, angel, boxes_)
+        boxes = np.concatenate([boxes_, klass_], axis=1)
+
+        if random.uniform(0, 1) > 0.5:
+            image = self.color_augmentor(image)
 
 
-            if boxes.shape[0] == 0 or np.sum(image) == 0:
-                boxes_ = np.array([[0, 0, 0, 0]])
-                klass_ = np.array([0])
-            else:
-                boxes_ = np.array(boxes[:, 0:4], dtype=np.float32)
-                klass_ = np.array(boxes[:, 4], dtype=np.int64)
+        image,boxes=self.random_affine(image,boxes)
+        return image, boxes
+
+    def eval_sample(self,dp):
+        fname, annos = dp
+        image = self.cv2_read_rgb(fname)
+        labels = annos.split(' ')
+        boxes = []
+
+        for label in labels:
+            bbox = np.array(label.split(','), dtype=np.float)
+            boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]])
+
+        boxes = np.array(boxes, dtype=np.float)
+
+        image, boxes = self.align_and_resize(image, boxes)
+        return image,boxes
+
+    def random_crop_sample(self,dp):
+        fname, annos = dp
+        image = self.cv2_read_rgb(fname)
+        labels = annos.split(' ')
+        boxes = []
+
+        for label in labels:
+            bbox = np.array(label.split(','), dtype=np.float)
+            boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]])
+
+        boxes = np.array(boxes, dtype=np.float)
+
+        sample_dice = random.uniform(0, 1)
 
 
-        except:
-            logger.warn('there is an err with %s' % fname)
-            traceback.print_exc()
-            image = np.zeros(shape=(cfg.DATA.hin, cfg.DATA.win, 3), dtype=np.float32)
-            boxes_ = np.array([[0, 0, 0, 0]])
-            klass_ = np.array([0])
-
-
-        return image, boxes_, klass_
-
-    def crazy_crop(self,image,boxes):
-        holder=[[image,boxes[:,0:4],boxes[:,4:5]]]
-
-
-        three_item=random.sample(self.lst,3)
-
-        for i in range(len(three_item)):
-            fname, annos = three_item[i]
-
-            image = cv2.imread(fname, cv2.IMREAD_COLOR)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-            labels = annos.split(' ')
-            boxes = []
-
-            for label in labels:
-                bbox = np.array(label.split(','), dtype=np.float)
-                boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]])
-
-            boxes = np.array(boxes, dtype=np.float)
-
+        if sample_dice > 0.7 and sample_dice <= 1:
+            image, boxes = Random_scale_withbbox(image, boxes, target_shape=[cfg.DATA.hin, cfg.DATA.win],
+                                                 jitter=0.3)
+        elif sample_dice > 0.35 and sample_dice <= 0.7:
             boxes_ = boxes[:, 0:4]
             klass_ = boxes[:, 4:]
-            image, shift_x, shift_y = Fill_img(image, target_width=cfg.DATA.win, target_height=cfg.DATA.hin)
-            boxes_[:, 0:4] = boxes_[:, 0:4] + np.array([shift_x, shift_y, shift_x, shift_y], dtype='float32')
-            h, w, _ = image.shape
-            boxes_[:, 0] /= w
-            boxes_[:, 1] /= h
-            boxes_[:, 2] /= w
-            boxes_[:, 3] /= h
-            image = image.astype(np.uint8)
-            image = cv2.resize(image, (cfg.DATA.win, cfg.DATA.hin))
 
-            boxes_[:, 0] *= cfg.DATA.win
-            boxes_[:, 1] *= cfg.DATA.hin
-            boxes_[:, 2] *= cfg.DATA.win
-            boxes_[:, 3] *= cfg.DATA.hin
+            image, boxes_, klass_ = dsfd_aug(image, boxes_, klass_)
+
+            image = image.astype(np.uint8)
+            boxes = np.concatenate([boxes_, klass_], axis=1)
+        else:
+            boxes_ = boxes[:, 0:4]
+            klass_ = boxes[:, 4:]
+            image, boxes_, klass_ = baidu_aug(image, boxes_, klass_)
+
             image = image.astype(np.uint8)
             boxes = np.concatenate([boxes_, klass_], axis=1)
 
-            if random.uniform(0, 1) > 0.5:
-                image = self.color_augmentor(image)
 
 
-            holder.append([image,boxes[:,0:4],boxes[:,4:5]])
+        ### align to target size
+        image, boxes = self.align_and_resize(image, boxes)
+
+        if random.uniform(0, 1) > 0.5:
+            image, boxes = Random_flip(image, boxes)
+
+        boxes_ = boxes[:, 0:4]
+        klass_ = boxes[:, 4:]
+        angel = random.choice([0, 90, 180, 270])
+
+        image, boxes_ = Rotate_with_box(image, angel, boxes_)
+        boxes = np.concatenate([boxes_, klass_], axis=1)
 
 
+        image = self.color_augmentor(image)
+
+        image, boxes = self.random_affine(image, boxes)
+        return image,boxes
+
+    def crazy_crop(self, dp):
+        items = [dp]
+
+        items += random.sample(self.lst, 3)
+
+        holder = []
+        for i in range(len(items)):
+            cur_dp = items[i]
+            image, boxes = self.eval_sample(cur_dp)
+
+            holder.append([image, boxes[:, 0:4], boxes[:, 4:5]])
 
         crazy_iamge = np.zeros(shape=(2 * cfg.DATA.hin, 2 * cfg.DATA.win, 3), dtype=holder[i][0].dtype)
 
@@ -461,12 +435,12 @@ class DsfdDataIter():
         crazy_iamge[cfg.DATA.hin:, :cfg.DATA.win, :] = holder[2][0]
         crazy_iamge[cfg.DATA.hin:, cfg.DATA.win:, :] = holder[3][0]
 
-        holder[ 1][1][:, [0, 2]] = holder[ 1][1][:, [0, 2]] + cfg.DATA.win
+        holder[1][1][:, [0, 2]] = holder[1][1][:, [0, 2]] + cfg.DATA.win
 
-        holder[ 2][1][:, [1, 3]] = holder[ 2][1][:, [1, 3]] + cfg.DATA.hin
+        holder[2][1][:, [1, 3]] = holder[2][1][:, [1, 3]] + cfg.DATA.hin
 
-        holder[ 3][1][:, [0, 2]] = holder[ 3][1][:, [0, 2]] + cfg.DATA.win
-        holder[ 3][1][:, [1, 3]] = holder[ 3][1][:, [1, 3]] + cfg.DATA.hin
+        holder[3][1][:, [0, 2]] = holder[3][1][:, [0, 2]] + cfg.DATA.win
+        holder[3][1][:, [1, 3]] = holder[3][1][:, [1, 3]] + cfg.DATA.hin
 
         tmp_bbox = np.concatenate((holder[0][1],
                                    holder[1][1],
@@ -509,10 +483,67 @@ class DsfdDataIter():
         boxes_clean = np.array(boxes_clean)
         klsses_clean = np.array(klsses_clean)
 
+        image = cur_img_block
+        boxes = np.concatenate([boxes_clean, klsses_clean], 1)
 
-        label=np.concatenate([boxes_clean,klsses_clean],1)
+        if random.uniform(0, 1) > 0.5:
+            image, boxes = Random_flip(image, boxes)
 
-        return cur_img_block, label
+        boxes_ = boxes[:, 0:4]
+        klass_ = boxes[:, 4:]
+        angel = random.choice([0, 90, 180, 270])
+
+        image, boxes_ = Rotate_with_box(image, angel, boxes_)
+        boxes = np.concatenate([boxes_, klass_], axis=1)
+
+        image = self.color_augmentor(image)
+
+        image, boxes = self.random_affine(image, boxes)
+        return image, boxes
+
+    def _map_func(self,dp,is_training):
+        """Data augmentation function."""
+        ####customed here
+        try:
+
+            if is_training:
+
+
+                sample_dice=random.uniform(0,1)
+                if sample_dice<0.3:
+                    image,boxes=self.simple_sample(dp)
+                elif sample_dice>=0.3 and sample_dice<0.6:
+                    image,boxes=self.random_crop_sample(dp)
+                else:
+                    image, boxes = self.crazy_crop(dp)
+            else:
+
+
+
+               image,boxes=self.eval_sample(dp)
+
+
+
+            if boxes.shape[0] == 0 or np.sum(image) == 0:
+                boxes_ = np.array([[0, 0, 0, 0]])
+                klass_ = np.array([0])
+            else:
+                boxes_ = np.array(boxes[:, 0:4], dtype=np.float32)
+                klass_ = np.array(boxes[:, 4], dtype=np.int64)
+
+
+        except:
+            logger.warn('there is an err with %s' % dp[0])
+            traceback.print_exc()
+            image = np.zeros(shape=(cfg.DATA.hin, cfg.DATA.win, 3), dtype=np.float32)
+            boxes_ = np.array([[0, 0, 0, 0]])
+            klass_ = np.array([0])
+
+
+        return image, boxes_, klass_
+
+
+
 
     def _get_border(self, border, size):
         i = 1
@@ -520,6 +551,73 @@ class DsfdDataIter():
             i *= 2
         return border // i
 
+    def random_affine(self,img, targets=(), degrees=0, translate=.0, scale=.5, shear=0):
+        # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
+        # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
+        # targets = [cls, xyxy]
+
+        height = img.shape[0]   # shape(h,w,c)
+        width = img.shape[1]
+
+        # Rotation and Scale
+        R = np.eye(3)
+        a = random.uniform(-degrees, degrees)
+        # a += random.choice([-180, -90, 0, 90])  # add 90deg rotations to small rotations
+        s = random.uniform(1 - scale, 1 + scale)
+        # s = 2 ** random.uniform(-scale, scale)
+        R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[1] / 2, img.shape[0] / 2), scale=s)
+
+        # Translation
+        T = np.eye(3)
+        T[0, 2] = random.uniform(-translate, translate) * img.shape[1]   # x translation (pixels)
+        T[1, 2] = random.uniform(-translate, translate) * img.shape[0]   # y translation (pixels)
+
+        # Shear
+        S = np.eye(3)
+        S[0, 1] = math.tan(random.uniform(-shear, shear) * math.pi / 180)  # x shear (deg)
+        S[1, 0] = math.tan(random.uniform(-shear, shear) * math.pi / 180)  # y shear (deg)
+
+        # Combined rotation matrix
+        M = S @ T @ R  # ORDER IS IMPORTANT HERE!!
+        if  (M != np.eye(3)).any():  # image changed
+            img = cv2.warpAffine(img, M[:2], dsize=(width, height), flags=cv2.INTER_LINEAR, borderValue=(114, 114, 114))
+
+        # Transform label coordinates
+        n = len(targets)
+        if n:
+            # warp points
+            xy = np.ones((n * 4, 3))
+            xy[:, :2] = targets[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
+            xy = (xy @ M.T)[:, :2].reshape(n, 8)
+
+            # create new boxes
+            x = xy[:, [0, 2, 4, 6]]
+            y = xy[:, [1, 3, 5, 7]]
+            xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
+
+            # # apply angle-based reduction of bounding boxes
+            # radians = a * math.pi / 180
+            # reduction = max(abs(math.sin(radians)), abs(math.cos(radians))) ** 0.5
+            # x = (xy[:, 2] + xy[:, 0]) / 2
+            # y = (xy[:, 3] + xy[:, 1]) / 2
+            # w = (xy[:, 2] - xy[:, 0]) * reduction
+            # h = (xy[:, 3] - xy[:, 1]) * reduction
+            # xy = np.concatenate((x - w / 2, y - h / 2, x + w / 2, y + h / 2)).reshape(4, n).T
+
+            # reject warped points outside of image
+            xy[:, [0, 2]] = xy[:, [0, 2]].clip(0, width)
+            xy[:, [1, 3]] = xy[:, [1, 3]].clip(0, height)
+            w = xy[:, 2] - xy[:, 0]
+            h = xy[:, 3] - xy[:, 1]
+            area = w * h
+            area0 = (targets[:, 2] - targets[:, 0]) * (targets[:, 3] - targets[:, 1])
+            ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))  # aspect ratio
+            i = (w > 2) & (h > 2) & (area / (area0 * s + 1e-16) > 0.2) & (ar < 20)
+
+            targets = targets[i]
+            targets[:, 0:4] = xy[i]
+
+        return img, targets
 
 
 class DataIter():

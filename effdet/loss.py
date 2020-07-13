@@ -136,7 +136,7 @@ def _box_loss(anchor_boxes,box_outputs, box_targets, num_positives,cls_targets_n
 
     return box_loss
 
-def ciou_loss(anchor_boxes,box_outputs, box_targets,weights,avg_factor=None):
+def ciou_loss(anchor_boxes,box_outputs, box_targets,weights,avg_factor=None,eps=1.e-6):
 
 
 
@@ -149,7 +149,7 @@ def ciou_loss(anchor_boxes,box_outputs, box_targets,weights,avg_factor=None):
     pos_mask=weights>0
 
     if avg_factor is None:
-        avg_factor = torch.sum(pos_mask) + 1e-6
+        avg_factor = torch.sum(pos_mask) + eps
 
 
     bboxes1 =box_outputs[pos_mask,...].view(-1, 4).float()
@@ -184,13 +184,13 @@ def ciou_loss(anchor_boxes,box_outputs, box_targets,weights,avg_factor=None):
     boxes2_size = (bboxes2[:, 2:] - bboxes2[:, :2]).clamp(min=0)
 
     v = (4.0 / (np.pi**2)) * \
-        ((torch.atan(boxes2_size[:, 0] / (boxes2_size[:, 1]+0.00001)) -
-                    torch.atan(boxes1_size[:, 0] / (boxes1_size[:, 1]+0.00001)))**2)
+        ((torch.atan(boxes2_size[:, 0] / (boxes2_size[:, 1]+eps)) -
+                    torch.atan(boxes1_size[:, 0] / (boxes1_size[:, 1]+eps)))**2)
 
     S = (ious >0.5).float()
-    alpha = S * v / (1 - ious + v)
+    alpha = S * v / (1 - ious + v+eps)
 
-    cious = ious - (center_dis / outer_diagonal_line)-alpha * v
+    cious = ious - (center_dis / outer_diagonal_line+eps)-alpha * v
 
     cious = 1-cious
 

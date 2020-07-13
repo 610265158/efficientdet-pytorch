@@ -29,10 +29,10 @@ config.TRAIN.prefetch_size = 15
 
 
 config.TRAIN.num_gpu = 1
-config.TRAIN.batch_size = 12
+config.TRAIN.batch_size = 16
 config.TRAIN.log_interval = 10                  ##10 iters for a log msg
 config.TRAIN.test_interval = 1
-config.TRAIN.epoch = 100
+config.TRAIN.epoch = 300
 
 config.TRAIN.init_lr=5.e-4
 
@@ -41,7 +41,7 @@ config.TRAIN.vis=False
 config.TRAIN.mix_precision=True
 
 
-config.TRAIN.warmup_step=1000
+config.TRAIN.warmup_step=1500
 config.TRAIN.opt='Adamw'
 config.TRAIN.ema=False
 
@@ -51,7 +51,7 @@ config.DATA.root_path=''
 config.DATA.train_txt_path='train.txt'
 config.DATA.val_txt_path='val.txt'
 config.DATA.mutiscale=False
-config.DATA.cracy_crop=0.5
+
 config.DATA.hin = 640                                        # input size during training , 128,160,   depends on
 config.DATA.win = 640
 
