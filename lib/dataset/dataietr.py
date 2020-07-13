@@ -516,6 +516,10 @@ class DsfdDataIter():
                     image,boxes=self.random_crop_sample(dp)
                 else:
                     image, boxes = self.crazy_crop(dp)
+
+                if random.uniform(0, 1) > 0.5:
+                    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
             else:
 
 
