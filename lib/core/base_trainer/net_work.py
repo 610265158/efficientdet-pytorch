@@ -62,13 +62,20 @@ class Train(object):
     checkpoint.pop('class_net.predict.conv_pw.weight')
     checkpoint.pop('class_net.predict.conv_pw.bias')
 
+
+
     net.load_state_dict(checkpoint,strict=False)
 
+    if cfg.MODEL.pretrained_model is not None:
+        state_dict = torch.load(cfg.MODEL.pretrained_model, map_location=self.device)
+        net.load_state_dict(state_dict, strict=False)
+
+        
     self.model = DetBenchTrain(net, config)
 
     self.detector=self.model.cuda()
 
-    self.load_weight()
+
     self.mean = torch.tensor([x * 255 for x in cfg.DATA.IMAGENET_DEFAULT_MEAN]).cuda().view(1, 3, 1, 1)
     self.std = torch.tensor([x * 255 for x in cfg.DATA.IMAGENET_DEFAULT_STD]).cuda().view(1, 3, 1, 1)
 

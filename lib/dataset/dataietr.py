@@ -122,84 +122,55 @@ class MutiScaleBatcher(BatchData):
 
             ### do crazy crop
 
-            if random.uniform(0,1)<cfg.DATA.cracy_crop and self.traing_flag:
-
-                if len(holder) == self.batch_size:
-                    crazy_holder=[]
-                    for i in range(0,len(holder),4):
-
-                        crazy_iamge=np.zeros(shape=(2*cfg.DATA.hin,2*cfg.DATA.win,3),dtype=holder[i][0].dtype)
-
-                        crazy_iamge[:cfg.DATA.hin,:cfg.DATA.win,:]=holder[i][0]
-                        crazy_iamge[:cfg.DATA.hin, cfg.DATA.win:, :] = holder[i+1][0]
-                        crazy_iamge[cfg.DATA.hin:, :cfg.DATA.win, :] = holder[i+2][0]
-                        crazy_iamge[cfg.DATA.hin:, cfg.DATA.win:, :] = holder[i+3][0]
-
-
-                        holder[i +1][1][:,[0, 2]]=holder[i +1][1][:,[0,2]]+cfg.DATA.win
-
-                        holder[i + 2][1][:,[1, 3]] = holder[i + 2][1][:,[1, 3]] + cfg.DATA.hin
-
-                        holder[i + 3][1][:,[0, 2]] = holder[i + 3][1][:,[0, 2]] + cfg.DATA.win
-                        holder[i + 3][1][:,[1, 3]] = holder[i + 3][1][:,[1, 3]] + cfg.DATA.hin
-
-
-
-                        tmp_bbox=np.concatenate((holder[i][1],
-                                                holder[i+1][1],
-                                                holder[i+2][1],
-                                                holder[i+3][1]),
-                                                axis=0)
-
-
-
-                        tmp_klass = np.concatenate((holder[i][2] ,
-                                                   holder[i + 1][2],
-                                                   holder[i + 2][2],
-                                                   holder[i + 3][2]),
-                                                    axis=0)
-
-                        ### do random crop 4 times:
-                        for j in range(4):
-
-                            curboxes=tmp_bbox.copy()
-                            cur_klasses=tmp_klass.copy()
-                            start_h=random.randint(0,cfg.DATA.hin)
-                            start_w = random.randint(0, cfg.DATA.win)
-
-                            cur_img_block=np.array(crazy_iamge[start_h:start_h+cfg.DATA.hin,start_w:start_w+cfg.DATA.win,:])
-
-                            for k in range(len(curboxes)):
-                                curboxes[k][0] = curboxes[k][0] - start_w
-                                curboxes[k][1] = curboxes[k][1] - start_h
-                                curboxes[k][2] = curboxes[k][2] - start_w
-                                curboxes[k][3] = curboxes[k][3] - start_h
-
-                            curboxes[:,[0, 2]] = np.clip(curboxes[:,[0, 2]], 0, cfg.DATA.win - 1)
-                            curboxes[:,[1, 3]] = np.clip(curboxes[:,[1, 3]], 0, cfg.DATA.hin - 1)
-                            ###cove the small faces
-
-
-                            boxes_clean=[]
-                            klsses_clean=[]
-                            for k in range(curboxes.shape[0]):
-                                box = curboxes[k]
-
-                                if not ((box[3] - box[1]) < cfg.DATA.cover_obj or (
-                                        box[2] - box[0]) < cfg.DATA.cover_obj):
-
-                                    boxes_clean.append(curboxes[k])
-                                    klsses_clean.append(cur_klasses[k])
-
-                            boxes_clean=np.array(boxes_clean)
-                            klsses_clean=np.array(klsses_clean)
-
-
-                            crazy_holder.append([cur_img_block,boxes_clean,klsses_clean])
-
-
-
-                    holder=crazy_holder
+            # if random.uniform(0,1)<cfg.DATA.cracy_crop and self.traing_flag:
+            #
+            #     if len(holder) == self.batch_size:
+            #         crazy_holder=[]
+            #         for i in range(0,len(holder),4):
+            #
+            #
+            #
+            #             ### do random crop 4 times:
+            #             for j in range(4):
+            #
+            #                 curboxes=tmp_bbox.copy()
+            #                 cur_klasses=tmp_klass.copy()
+            #                 start_h=random.randint(0,cfg.DATA.hin)
+            #                 start_w = random.randint(0, cfg.DATA.win)
+            #
+            #                 cur_img_block=np.array(crazy_iamge[start_h:start_h+cfg.DATA.hin,start_w:start_w+cfg.DATA.win,:])
+            #
+            #                 for k in range(len(curboxes)):
+            #                     curboxes[k][0] = curboxes[k][0] - start_w
+            #                     curboxes[k][1] = curboxes[k][1] - start_h
+            #                     curboxes[k][2] = curboxes[k][2] - start_w
+            #                     curboxes[k][3] = curboxes[k][3] - start_h
+            #
+            #                 curboxes[:,[0, 2]] = np.clip(curboxes[:,[0, 2]], 0, cfg.DATA.win - 1)
+            #                 curboxes[:,[1, 3]] = np.clip(curboxes[:,[1, 3]], 0, cfg.DATA.hin - 1)
+            #                 ###cove the small faces
+            #
+            #
+            #                 boxes_clean=[]
+            #                 klsses_clean=[]
+            #                 for k in range(curboxes.shape[0]):
+            #                     box = curboxes[k]
+            #
+            #                     if not ((box[3] - box[1]) < cfg.DATA.cover_obj or (
+            #                             box[2] - box[0]) < cfg.DATA.cover_obj):
+            #
+            #                         boxes_clean.append(curboxes[k])
+            #                         klsses_clean.append(cur_klasses[k])
+            #
+            #                 boxes_clean=np.array(boxes_clean)
+            #                 klsses_clean=np.array(klsses_clean)
+            #
+            #
+            #                 crazy_holder.append([cur_img_block,boxes_clean,klsses_clean])
+            #
+            #
+            #
+            #         holder=crazy_holder
 
 
             if len(holder) == self.batch_size:
@@ -365,10 +336,11 @@ class DsfdDataIter():
                     boxes = np.concatenate([boxes_, klass_], axis=1)
 
 
+
+
                 if random.uniform(0, 1) > 0.5:
                     image =self.color_augmentor(image)
-                # if random.uniform(0, 1) > 0.5:
-                #     image =pixel_jitter(image,15)
+
                 boxes_ = boxes[:, 0:4]
                 klass_ = boxes[:, 4:]
                 image, shift_x, shift_y = Fill_img(image, target_width=cfg.DATA.win, target_height=cfg.DATA.hin)
@@ -387,6 +359,12 @@ class DsfdDataIter():
                 boxes_[:, 3] *= cfg.DATA.hin
                 image = image.astype(np.uint8)
                 boxes = np.concatenate([boxes_, klass_], axis=1)
+
+                if random.uniform(0, 1) < cfg.DATA.cracy_crop:
+                    image,boxes=self.crazy_crop(image, boxes)
+
+                if random.uniform(0, 1) > 0.5:
+                    image =pixel_jitter(image,15)
             else:
                 boxes_ = boxes[:, 0:4]
                 klass_ = boxes[:, 4:]
@@ -428,6 +406,113 @@ class DsfdDataIter():
 
         return image, boxes_, klass_
 
+    def crazy_crop(self,image,boxes):
+        holder=[[image,boxes[:,0:4],boxes[:,4:5]]]
+
+
+        three_item=random.sample(self.lst,3)
+
+        for i in range(len(three_item)):
+            fname, annos = three_item[i]
+
+            image = cv2.imread(fname, cv2.IMREAD_COLOR)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            labels = annos.split(' ')
+            boxes = []
+
+            for label in labels:
+                bbox = np.array(label.split(','), dtype=np.float)
+                boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]])
+
+            boxes = np.array(boxes, dtype=np.float)
+
+            boxes_ = boxes[:, 0:4]
+            klass_ = boxes[:, 4:]
+            image, shift_x, shift_y = Fill_img(image, target_width=cfg.DATA.win, target_height=cfg.DATA.hin)
+            boxes_[:, 0:4] = boxes_[:, 0:4] + np.array([shift_x, shift_y, shift_x, shift_y], dtype='float32')
+            h, w, _ = image.shape
+            boxes_[:, 0] /= w
+            boxes_[:, 1] /= h
+            boxes_[:, 2] /= w
+            boxes_[:, 3] /= h
+            image = image.astype(np.uint8)
+            image = cv2.resize(image, (cfg.DATA.win, cfg.DATA.hin))
+
+            boxes_[:, 0] *= cfg.DATA.win
+            boxes_[:, 1] *= cfg.DATA.hin
+            boxes_[:, 2] *= cfg.DATA.win
+            boxes_[:, 3] *= cfg.DATA.hin
+            image = image.astype(np.uint8)
+            boxes = np.concatenate([boxes_, klass_], axis=1)
+
+            if random.uniform(0, 1) > 0.5:
+                image = self.color_augmentor(image)
+
+
+            holder.append([image,boxes[:,0:4],boxes[:,4:5]])
+
+
+
+        crazy_iamge = np.zeros(shape=(2 * cfg.DATA.hin, 2 * cfg.DATA.win, 3), dtype=holder[i][0].dtype)
+
+        crazy_iamge[:cfg.DATA.hin, :cfg.DATA.win, :] = holder[0][0]
+        crazy_iamge[:cfg.DATA.hin, cfg.DATA.win:, :] = holder[1][0]
+        crazy_iamge[cfg.DATA.hin:, :cfg.DATA.win, :] = holder[2][0]
+        crazy_iamge[cfg.DATA.hin:, cfg.DATA.win:, :] = holder[3][0]
+
+        holder[ 1][1][:, [0, 2]] = holder[ 1][1][:, [0, 2]] + cfg.DATA.win
+
+        holder[ 2][1][:, [1, 3]] = holder[ 2][1][:, [1, 3]] + cfg.DATA.hin
+
+        holder[ 3][1][:, [0, 2]] = holder[ 3][1][:, [0, 2]] + cfg.DATA.win
+        holder[ 3][1][:, [1, 3]] = holder[ 3][1][:, [1, 3]] + cfg.DATA.hin
+
+        tmp_bbox = np.concatenate((holder[0][1],
+                                   holder[1][1],
+                                   holder[2][1],
+                                   holder[3][1]),
+                                  axis=0)
+
+        tmp_klass = np.concatenate((holder[0][2],
+                                    holder[1][2],
+                                    holder[2][2],
+                                    holder[3][2]),
+                                   axis=0)
+        curboxes = tmp_bbox.copy()
+        cur_klasses = tmp_klass.copy()
+        start_h = random.randint(0, cfg.DATA.hin)
+        start_w = random.randint(0, cfg.DATA.win)
+
+        cur_img_block = np.array(crazy_iamge[start_h:start_h + cfg.DATA.hin, start_w:start_w + cfg.DATA.win, :])
+
+        for k in range(len(curboxes)):
+            curboxes[k][0] = curboxes[k][0] - start_w
+            curboxes[k][1] = curboxes[k][1] - start_h
+            curboxes[k][2] = curboxes[k][2] - start_w
+            curboxes[k][3] = curboxes[k][3] - start_h
+
+        curboxes[:, [0, 2]] = np.clip(curboxes[:, [0, 2]], 0, cfg.DATA.win - 1)
+        curboxes[:, [1, 3]] = np.clip(curboxes[:, [1, 3]], 0, cfg.DATA.hin - 1)
+        ###cove the small faces
+
+        boxes_clean = []
+        klsses_clean = []
+        for k in range(curboxes.shape[0]):
+            box = curboxes[k]
+
+            if not ((box[3] - box[1]) < cfg.DATA.cover_obj or (
+                    box[2] - box[0]) < cfg.DATA.cover_obj):
+                boxes_clean.append(curboxes[k])
+                klsses_clean.append(cur_klasses[k])
+
+        boxes_clean = np.array(boxes_clean)
+        klsses_clean = np.array(klsses_clean)
+
+
+        label=np.concatenate([boxes_clean,klsses_clean],1)
+
+        return cur_img_block, label
 
     def _get_border(self, border, size):
         i = 1
