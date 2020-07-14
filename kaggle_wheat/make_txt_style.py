@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-
+import os
 data_dir='../global-wheat-detection/train'
 train_csv='../global-wheat-detection/train.csv'
 
@@ -12,7 +12,17 @@ train_data=pd.read_csv(train_csv)
 print(train_data)
 
 
+
+total_list_from_image=os.listdir(data_dir)
+total_list_from_image=[ x.split('.')[0] for x in total_list_from_image]
+
+
 image_ids=list(set(train_data['image_id']))
+
+emplty_image_list=[ x for x in total_list_from_image if x not in image_ids]
+
+print('the image has no label',emplty_image_list)
+
 
 train_list=image_ids[:int(ratio*len(image_ids))]
 val_list=image_ids[int(ratio*len(image_ids)):]
@@ -35,6 +45,18 @@ for k,id in enumerate(train_list):
         cur_box_info=" "+ str(cur_box_info[0])+',' + str(cur_box_info[1])+ ','+\
                      str(cur_box_info[0]+cur_box_info[2])+","+str(cur_box_info[1]+cur_box_info[3]) +',1'
         cur_label_message=cur_label_message+cur_box_info
+
+    cur_label_message+='\n'
+    train_file.write(cur_label_message)
+
+
+
+###write the empty image with train  label as 0,0,0,0,0
+
+for k,id in enumerate(emplty_image_list):
+
+
+    cur_label_message=data_dir+'/'+str(id)+'.jpg| 0,0,0,0,0'
 
     cur_label_message+='\n'
     train_file.write(cur_label_message)
