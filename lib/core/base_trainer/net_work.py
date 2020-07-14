@@ -53,18 +53,18 @@ class Train(object):
     net = EfficientDet(config, pretrained_backbone=False)
 
 
-    # checkpoint = torch.load('./tf_efficientdet_d2.pth')
-    # #
-    # # for k, v in checkpoint.items():
-    # #     if 'predict' in k:
-    # #         print(k)
-    # checkpoint.pop('class_net.predict.conv_dw.weight')
-    # checkpoint.pop('class_net.predict.conv_pw.weight')
-    # checkpoint.pop('class_net.predict.conv_pw.bias')
+    checkpoint = torch.load('./tf_efficientdet_d2.pth')
+    #
+    # for k, v in checkpoint.items():
+    #     if 'predict' in k:
+    #         print(k)
+    checkpoint.pop('class_net.predict.conv_dw.weight')
+    checkpoint.pop('class_net.predict.conv_pw.weight')
+    checkpoint.pop('class_net.predict.conv_pw.bias')
 
 
 
-    # net.load_state_dict(checkpoint,strict=False)
+    net.load_state_dict(checkpoint,strict=False)
 
     if cfg.MODEL.pretrained_model is not None:
         state_dict = torch.load(cfg.MODEL.pretrained_model, map_location=self.device)
