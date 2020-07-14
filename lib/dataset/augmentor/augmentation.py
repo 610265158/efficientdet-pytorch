@@ -160,6 +160,7 @@ def Affine_aug(src,strength,label=None):
         #label_rotated = label_rotated.astype(np.int32)
         label_rotated=label_rotated.T
     return trans_img,label_rotated
+
 def Padding_aug(src,max_pattern_ratio=0.05):
 
     pattern=np.ones_like(src)
@@ -188,14 +189,14 @@ def Fill_img(img_raw,target_height,target_width,label=None):
     raw_width = img_raw.shape[1]
     if raw_width / raw_height >= target_width / target_height:
         shape_need = [int(target_height / target_width * raw_width), raw_width, channel]
-        img_fill = np.zeros(shape_need, dtype=img_raw.dtype)
+        img_fill = np.zeros(shape_need, dtype=img_raw.dtype)+cfg.DATA.IMAGENET_DEFAULT_MEAN
         shift_x=(img_fill.shape[1]-raw_width)//2
         shift_y=(img_fill.shape[0]-raw_height)//2
         for i in range(channel):
             img_fill[shift_y:raw_height+shift_y, shift_x:raw_width+shift_x, i] = img_raw[:,:,i]
     else:
         shape_need = [raw_height, int(target_width / target_height * raw_height), channel]
-        img_fill = np.zeros(shape_need, dtype=img_raw.dtype)
+        img_fill = np.zeros(shape_need, dtype=img_raw.dtype)+cfg.DATA.IMAGENET_DEFAULT_MEAN
         shift_x = (img_fill.shape[1] - raw_width) // 2
         shift_y = (img_fill.shape[0] - raw_height) // 2
         for i in range(channel):
@@ -212,7 +213,7 @@ def Random_crop(src,shrink):
     h_shrink=int(h*shrink)
     w_shrink = int(w * shrink)
     bimg = cv2.copyMakeBorder(src, h_shrink, h_shrink, w_shrink, w_shrink, borderType=cv2.BORDER_CONSTANT,
-                              value=(0,0,0))
+                              value=cfg.DATA.IMAGENET_DEFAULT_MEAN)
 
     start_h=random.randint(0,2*h_shrink)
     start_w=random.randint(0,2*w_shrink)
@@ -397,30 +398,6 @@ def produce_heatmaps_with_bbox(image,boxes,klass,num_klass):
 
 
 
-def Mirror(src,label=None,symmetry=None):
-
-    img = cv2.flip(src, 1)
-    if label is None:
-        return img
-
-    width=img.shape[1]
-    cod = []
-    allc = []
-    for i in range(label.shape[0]):
-        x, y = label[i][0], label[i][1]
-        if x >= 0:
-            x = width - 1 - x
-        cod.append((x, y))
-    # **** the joint index depends on the dataset ****
-    for (q, w) in symmetry:
-        cod[q], cod[w] = cod[w], cod[q]
-    for i in range(label.shape[0]):
-        allc.append(cod[i][0])
-        allc.append(cod[i][1])
-    label = np.array(allc).reshape(label.shape[0], 2)
-    return img,label
-
-
 class RandomBaiduCrop(object):
     """Crop
     Arguments:
@@ -526,7 +503,7 @@ class RandomBaiduCrop(object):
             if choice_box[0] < 0 or choice_box[1] < 0:
                 new_img_width = width if choice_box[0] >= 0 else width - choice_box[0]
                 new_img_height = height if choice_box[1] >= 0 else height - choice_box[1]
-                image_pad = np.zeros((new_img_height, new_img_width, 3), dtype=float)
+                image_pad = np.zeros((new_img_height, new_img_width, 3), dtype=float)+cfg.DATA.IMAGENET_DEFAULT_MEAN
                 start_left = 0 if choice_box[0] >= 0 else -choice_box[0]
                 start_top = 0 if choice_box[1] >= 0 else -choice_box[1]
                 image_pad[start_top:, start_left:, :] = image

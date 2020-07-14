@@ -55,8 +55,8 @@ config.DATA.mutiscale=False
 config.DATA.hin = 640                                        # input size during training , 128,160,   depends on
 config.DATA.win = 640
 
-config.DATA.IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
-config.DATA.IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
+config.DATA.IMAGENET_DEFAULT_MEAN = [ x *255 for x in (0.485, 0.456, 0.406)]
+config.DATA.IMAGENET_DEFAULT_STD = [x *255 for x in  (0.229, 0.224, 0.225)]
 config.DATA.max_boxes=200
 config.DATA.cover_obj=10
 config.MODEL = edict()

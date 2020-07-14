@@ -30,13 +30,13 @@ class Detector():
 
         self.model = DetBenchPredict(net, config)
 
-        self.model = self.model.cuda()
+        self.model = self.model.to(self.device)
 
         self.model.eval()
 
 
-        self.mean = torch.tensor([x * 255 for x in cfg.DATA.IMAGENET_DEFAULT_MEAN]).cuda().view(1, 3, 1, 1)
-        self.std = torch.tensor([x * 255 for x in cfg.DATA.IMAGENET_DEFAULT_MEAN]).cuda().view(1, 3, 1, 1)
+        self.mean = torch.tensor(cfg.DATA.IMAGENET_DEFAULT_MEAN).to(self.device).view(1, 3, 1, 1)
+        self.std = torch.tensor(cfg.DATA.IMAGENET_DEFAULT_MEAN).to(self.device).view(1, 3, 1, 1)
 
 
     def __call__(self, img, input_size=640,raw_image_size=1024,iou_thres=0.5,score_thres=0.05):

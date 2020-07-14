@@ -413,7 +413,6 @@ class DsfdDataIter():
 
         image = self.color_augmentor(image)
 
-        image, boxes = self.random_affine(image, boxes)
         return image,boxes
 
     def crazy_crop(self, dp):
@@ -517,12 +516,7 @@ class DsfdDataIter():
                 else:
                     image, boxes = self.crazy_crop(dp)
 
-                if random.uniform(0, 1) > 0.5:
-                    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
             else:
-
-
 
                image,boxes=self.eval_sample(dp)
 

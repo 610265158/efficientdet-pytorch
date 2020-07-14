@@ -246,6 +246,8 @@ class Anchors(nn.Module):
                 the largest feature stride 2^max_level.
         """
         super(Anchors, self).__init__()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
+
         self.min_level = min_level
         self.max_level = max_level
         self.num_scales = num_scales
@@ -253,7 +255,7 @@ class Anchors(nn.Module):
         self.anchor_scale = anchor_scale
         self.image_size = image_size
         self.config = self._generate_configs()
-        self.boxes= self._generate_boxes().cuda()
+        self.boxes= self._generate_boxes().to(self.device)
 
     def _generate_configs(self):
         """Generate configurations of anchor boxes."""
