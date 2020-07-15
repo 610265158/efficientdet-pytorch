@@ -58,7 +58,7 @@ config.DATA.win = 512
 config.DATA.IMAGENET_DEFAULT_MEAN = [ x *255 for x in (0.485, 0.456, 0.406)]
 config.DATA.IMAGENET_DEFAULT_STD = [x *255 for x in  (0.229, 0.224, 0.225)]
 config.DATA.max_boxes=200
-config.DATA.cover_obj=10
+config.DATA.cover_obj=5
 config.MODEL = edict()
 config.MODEL.model_path = './models/'                                        ## save directory
 
