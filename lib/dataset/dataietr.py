@@ -470,7 +470,7 @@ class DsfdDataIter():
                 for i in range(boxes.shape[0]):
                     box = boxes[i]
 
-                    if (box[3] - box[1]) < cfg.DATA.cur_img_block or (box[2] - box[0]) < cfg.DATA.cur_img_block:
+                    if (box[3] - box[1]) < cfg.DATA.cover_obj or (box[2] - box[0]) < cfg.DATA.cover_obj:
                         image[int(box[1]):int(box[3]), int(box[0]):int(box[2]), :] = np.array(cfg.DATA.IMAGENET_DEFAULT_MEAN,
                                                                                               dtype=image.dtype)
                         continue
