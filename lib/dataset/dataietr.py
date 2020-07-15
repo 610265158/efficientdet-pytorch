@@ -120,58 +120,6 @@ class MutiScaleBatcher(BatchData):
             data=[image,boxes_,klass_]
             holder.append(data)
 
-            ### do crazy crop
-
-            # if random.uniform(0,1)<cfg.DATA.cracy_crop and self.traing_flag:
-            #
-            #     if len(holder) == self.batch_size:
-            #         crazy_holder=[]
-            #         for i in range(0,len(holder),4):
-            #
-            #
-            #
-            #             ### do random crop 4 times:
-            #             for j in range(4):
-            #
-            #                 curboxes=tmp_bbox.copy()
-            #                 cur_klasses=tmp_klass.copy()
-            #                 start_h=random.randint(0,cfg.DATA.hin)
-            #                 start_w = random.randint(0, cfg.DATA.win)
-            #
-            #                 cur_img_block=np.array(crazy_iamge[start_h:start_h+cfg.DATA.hin,start_w:start_w+cfg.DATA.win,:])
-            #
-            #                 for k in range(len(curboxes)):
-            #                     curboxes[k][0] = curboxes[k][0] - start_w
-            #                     curboxes[k][1] = curboxes[k][1] - start_h
-            #                     curboxes[k][2] = curboxes[k][2] - start_w
-            #                     curboxes[k][3] = curboxes[k][3] - start_h
-            #
-            #                 curboxes[:,[0, 2]] = np.clip(curboxes[:,[0, 2]], 0, cfg.DATA.win - 1)
-            #                 curboxes[:,[1, 3]] = np.clip(curboxes[:,[1, 3]], 0, cfg.DATA.hin - 1)
-            #                 ###cove the small faces
-            #
-            #
-            #                 boxes_clean=[]
-            #                 klsses_clean=[]
-            #                 for k in range(curboxes.shape[0]):
-            #                     box = curboxes[k]
-            #
-            #                     if not ((box[3] - box[1]) < cfg.DATA.cover_obj or (
-            #                             box[2] - box[0]) < cfg.DATA.cover_obj):
-            #
-            #                         boxes_clean.append(curboxes[k])
-            #                         klsses_clean.append(cur_klasses[k])
-            #
-            #                 boxes_clean=np.array(boxes_clean)
-            #                 klsses_clean=np.array(klsses_clean)
-            #
-            #
-            #                 crazy_holder.append([cur_img_block,boxes_clean,klsses_clean])
-            #
-            #
-            #
-            #         holder=crazy_holder
-
 
             if len(holder) == self.batch_size:
 
@@ -507,7 +455,6 @@ class DsfdDataIter():
 
             if is_training:
 
-
                 sample_dice=random.uniform(0,1)
                 if sample_dice<0.3:
                     image,boxes=self.simple_sample(dp)
@@ -516,6 +463,18 @@ class DsfdDataIter():
                 else:
                     image, boxes = self.crazy_crop(dp)
 
+                boxes_clean = []
+                for i in range(boxes.shape[0]):
+                    box = boxes[i]
+
+                    if (box[3] - box[1]) < cfg.DATA.cover_small_face or (box[2] - box[0]) < cfg.DATA.cover_small_face:
+                        image[int(box[1]):int(box[3]), int(box[0]):int(box[2]), :] = np.array(cfg.DATA.IMAGENET_DEFAULT_MEAN,
+                                                                                              dtype=image.dtype)
+                        continue
+                    else:
+                        boxes_clean.append(box)
+
+                boxes=np.array(boxes_clean)
             else:
 
                image,boxes=self.eval_sample(dp)
