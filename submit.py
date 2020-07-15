@@ -27,7 +27,7 @@ show_flag=True
 def format_prediction_string(boxes):
     pred_strings = []
     for j in range(boxes.shape[0]):
-        pred_strings.append("{0:.4f} {1} {2} {3} {4}".format(boxes[j][4],boxes[j][0], boxes[j][1], boxes[j][2], boxes[j][3]))
+        pred_strings.append("{0:.4f} {1} {2} {3} {4}".format(boxes[j][4],int(boxes[j][0]), int(boxes[j][1]), int(boxes[j][2]-boxes[j][0]), int(boxes[j][3]-boxes[j][1])))
     return " ".join(pred_strings)
 
 
