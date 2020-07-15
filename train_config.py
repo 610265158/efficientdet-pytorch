@@ -32,7 +32,7 @@ config.TRAIN.num_gpu = 1
 config.TRAIN.batch_size = 16
 config.TRAIN.log_interval = 10                  ##10 iters for a log msg
 config.TRAIN.test_interval = 1
-config.TRAIN.epoch = 300
+config.TRAIN.epoch = 50
 
 config.TRAIN.init_lr=5.e-4
 
@@ -52,8 +52,8 @@ config.DATA.train_txt_path='train.txt'
 config.DATA.val_txt_path='val.txt'
 config.DATA.mutiscale=False
 
-config.DATA.hin = 640                                        # input size during training , 128,160,   depends on
-config.DATA.win = 640
+config.DATA.hin = 512                                        # input size during training , 128,160,   depends on
+config.DATA.win = 512
 
 config.DATA.IMAGENET_DEFAULT_MEAN = [ x *255 for x in (0.485, 0.456, 0.406)]
 config.DATA.IMAGENET_DEFAULT_STD = [x *255 for x in  (0.229, 0.224, 0.225)]
