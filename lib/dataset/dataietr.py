@@ -287,8 +287,8 @@ class DsfdDataIter():
         image, boxes_ = Rotate_with_box(image, angel, boxes_)
         boxes = np.concatenate([boxes_, klass_], axis=1)
 
-        if random.uniform(0, 1) > 0.5:
-            image = self.color_augmentor(image)
+
+
 
 
         image,boxes=self.random_affine(image,boxes)
@@ -359,7 +359,6 @@ class DsfdDataIter():
         boxes = np.concatenate([boxes_, klass_], axis=1)
 
 
-        image = self.color_augmentor(image)
 
         return image,boxes
 
@@ -373,83 +372,70 @@ class DsfdDataIter():
             cur_dp = items[i]
             image, boxes = self.eval_sample(cur_dp)
 
-            holder.append([image, boxes[:, 0:4], boxes[:, 4:5]])
+            holder.append([image, boxes])
 
-        crazy_iamge = np.zeros(shape=(2 * cfg.DATA.hin, 2 * cfg.DATA.win, 3), dtype=holder[i][0].dtype)
+        s = cfg.DATA.hin
 
-        crazy_iamge[:cfg.DATA.hin, :cfg.DATA.win, :] = holder[0][0]
-        crazy_iamge[:cfg.DATA.hin, cfg.DATA.win:, :] = holder[1][0]
-        crazy_iamge[cfg.DATA.hin:, :cfg.DATA.win, :] = holder[2][0]
-        crazy_iamge[cfg.DATA.hin:, cfg.DATA.win:, :] = holder[3][0]
 
-        holder[1][1][:, [0, 2]] = holder[1][1][:, [0, 2]] + cfg.DATA.win
+        yc, xc = [int(random.uniform(-x, 2 * s + x)) for x in [-cfg.DATA.hin//2,-cfg.DATA.win//2]]  # mosaic center x, y
+        labels4=[]
+        for i, item in enumerate(holder):
+            # Load image
+            img=item[0]
+            h,w,_=img.shape
 
-        holder[2][1][:, [1, 3]] = holder[2][1][:, [1, 3]] + cfg.DATA.hin
+            # place img in img4
+            if i == 0:  # top left
+                img4 = np.full((s * 2, s * 2, img.shape[2]), cfg.DATA.IMAGENET_DEFAULT_MEAN, dtype=np.uint8)  # base image with 4 tiles
+                x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (large image)
+                x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (small image)
+            elif i == 1:  # top right
+                x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, s * 2), yc
+                x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
+            elif i == 2:  # bottom left
+                x1a, y1a, x2a, y2a = max(xc - w, 0), yc, xc, min(s * 2, yc + h)
+                x1b, y1b, x2b, y2b = w - (x2a - x1a), 0, max(xc, w), min(y2a - y1a, h)
+            elif i == 3:  # bottom right
+                x1a, y1a, x2a, y2a = xc, yc, min(xc + w, s * 2), min(s * 2, yc + h)
+                x1b, y1b, x2b, y2b = 0, 0, min(w, x2a - x1a), min(y2a - y1a, h)
 
-        holder[3][1][:, [0, 2]] = holder[3][1][:, [0, 2]] + cfg.DATA.win
-        holder[3][1][:, [1, 3]] = holder[3][1][:, [1, 3]] + cfg.DATA.hin
+            img4[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]  # img4[ymin:ymax, xmin:xmax]
+            padw = x1a - x1b
+            padh = y1a - y1b
 
-        tmp_bbox = np.concatenate((holder[0][1],
-                                   holder[1][1],
-                                   holder[2][1],
-                                   holder[3][1]),
-                                  axis=0)
+            # Labels
+            x = item[1]
+            labels = x.copy()
+            if x.size > 0:  # Normalized xywh to pixel xyxy format
+                labels[:, 0] = x[:, 0] + padw
+                labels[:, 1] = x[:, 1] + padh
+                labels[:, 2] = x[:, 2] + padw
+                labels[:, 3] = x[:, 3] + padh
+            labels4.append(labels)
 
-        tmp_klass = np.concatenate((holder[0][2],
-                                    holder[1][2],
-                                    holder[2][2],
-                                    holder[3][2]),
-                                   axis=0)
-        curboxes = tmp_bbox.copy()
-        cur_klasses = tmp_klass.copy()
-        start_h = random.randint(0, cfg.DATA.hin)
-        start_w = random.randint(0, cfg.DATA.win)
+        # Concat/clip labels
+        if len(labels4):
+            labels4 = np.concatenate(labels4, 0)
+            # np.clip(labels4[:, 1:] - s / 2, 0, s, out=labels4[:, 1:])  # use with center crop
+            np.clip(labels4[:, 0:4], 0, 2 * s, out=labels4[:, 0:4])  # use with random_affine
 
-        cur_img_block = np.array(crazy_iamge[start_h:start_h + cfg.DATA.hin, start_w:start_w + cfg.DATA.win, :])
-
-        for k in range(len(curboxes)):
-            curboxes[k][0] = curboxes[k][0] - start_w
-            curboxes[k][1] = curboxes[k][1] - start_h
-            curboxes[k][2] = curboxes[k][2] - start_w
-            curboxes[k][3] = curboxes[k][3] - start_h
-
-        curboxes[:, [0, 2]] = np.clip(curboxes[:, [0, 2]], 0, cfg.DATA.win - 1)
-        curboxes[:, [1, 3]] = np.clip(curboxes[:, [1, 3]], 0, cfg.DATA.hin - 1)
-        ###cove the small faces
-
-        boxes_clean = []
-        klsses_clean = []
-        for k in range(curboxes.shape[0]):
-            box = curboxes[k]
-
-            if not ((box[3] - box[1]) < cfg.DATA.cover_obj or (
-                    box[2] - box[0]) < cfg.DATA.cover_obj):
-                cur_img_block[int(box[1]):int(box[3]), int(box[0]):int(box[2]), :] = np.array(cfg.DATA.IMAGENET_DEFAULT_MEAN,
-                                                                                      dtype=image.dtype)
-
-                boxes_clean.append(curboxes[k])
-                klsses_clean.append(cur_klasses[k])
-
-        boxes_clean = np.array(boxes_clean)
-        klsses_clean = np.array(klsses_clean)
-
-        image = cur_img_block
-        boxes = np.concatenate([boxes_clean, klsses_clean], 1)
-
+        image=img4
+        boxes=labels4
         if random.uniform(0, 1) > 0.5:
             image, boxes = Random_flip(image, boxes)
 
-        boxes_ = boxes[:, 0:4]
-        klass_ = boxes[:, 4:]
+        boxes_ = labels4[:, 0:4]
+        klass_ = labels4[:, 4:]
         angel = random.choice([0, 90, 180, 270])
 
         image, boxes_ = Rotate_with_box(image, angel, boxes_)
         boxes = np.concatenate([boxes_, klass_], axis=1)
-
-        image = self.color_augmentor(image)
+        ### align to target size
+        image, boxes = self.align_and_resize(image, boxes)
 
         image, boxes = self.random_affine(image, boxes)
-        return image, boxes
+
+        return image,boxes
 
     def _map_func(self,dp,is_training):
         """Data augmentation function."""
@@ -459,12 +445,13 @@ class DsfdDataIter():
             if is_training:
 
                 sample_dice=random.uniform(0,1)
-                if sample_dice<0.3:
+                if sample_dice>0.5:
                     image,boxes=self.simple_sample(dp)
-                elif sample_dice>=0.3 and sample_dice<0.6:
-                    image,boxes=self.random_crop_sample(dp)
                 else:
                     image, boxes = self.crazy_crop(dp)
+
+                if sample_dice > 0.5:
+                    image = self.color_augmentor(image)
 
                 boxes_clean = []
                 for i in range(boxes.shape[0]):
@@ -540,7 +527,7 @@ class DsfdDataIter():
         # Combined rotation matrix
         M = S @ T @ R  # ORDER IS IMPORTANT HERE!!
         if  (M != np.eye(3)).any():  # image changed
-            img = cv2.warpAffine(img, M[:2], dsize=(width, height), flags=cv2.INTER_LINEAR, borderValue=(114, 114, 114))
+            img = cv2.warpAffine(img, M[:2], dsize=(width, height), flags=cv2.INTER_LINEAR, borderValue=cfg.DATA.IMAGENET_DEFAULT_MEAN)
 
         # Transform label coordinates
         n = len(targets)
@@ -594,8 +581,6 @@ class DataIter():
         self.generator = DsfdDataIter(img_root_path, ann_file, self.training_flag )
 
         self.ds = self.build_iter()
-
-
 
         self.size=len(self.generator)//self.batch_size
 
