@@ -424,6 +424,9 @@ class DsfdDataIter():
 
             if not ((box[3] - box[1]) < cfg.DATA.cover_obj or (
                     box[2] - box[0]) < cfg.DATA.cover_obj):
+                cur_img_block[int(box[1]):int(box[3]), int(box[0]):int(box[2]), :] = np.array(cfg.DATA.IMAGENET_DEFAULT_MEAN,
+                                                                                      dtype=image.dtype)
+
                 boxes_clean.append(curboxes[k])
                 klsses_clean.append(cur_klasses[k])
 
@@ -467,7 +470,7 @@ class DsfdDataIter():
                 for i in range(boxes.shape[0]):
                     box = boxes[i]
 
-                    if (box[3] - box[1]) < cfg.DATA.cover_small_face or (box[2] - box[0]) < cfg.DATA.cover_small_face:
+                    if (box[3] - box[1]) < cfg.DATA.cur_img_block or (box[2] - box[0]) < cfg.DATA.cur_img_block:
                         image[int(box[1]):int(box[3]), int(box[0]):int(box[2]), :] = np.array(cfg.DATA.IMAGENET_DEFAULT_MEAN,
                                                                                               dtype=image.dtype)
                         continue
