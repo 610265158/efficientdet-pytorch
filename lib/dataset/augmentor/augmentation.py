@@ -305,15 +305,23 @@ def Random_scale_withbbox(image,bboxes,target_shape,jitter=0.5):
     return image,bboxes_fix
 
 
-def Random_flip(im, boxes):
-
-    im_lr = np.fliplr(im).copy()
-    h,w,_ = im.shape
-    xmin = w - boxes[:,2]
-    xmax = w - boxes[:,0]
-    boxes[:,0] = xmin
-    boxes[:,2] = xmax
-    return im_lr, boxes
+def Random_flip(im, boxes,updown=False):
+    if updown:
+        im_up = np.flipud(im).copy()
+        h, w, _ = im.shape
+        ymin = h - boxes[:, 3]
+        ymax = h - boxes[:, 1]
+        boxes[:, 1] = ymin
+        boxes[:, 3] = ymax
+        return im_up, boxes
+    else:
+        im_lr = np.fliplr(im).copy()
+        h,w,_ = im.shape
+        xmin = w - boxes[:,2]
+        xmax = w - boxes[:,0]
+        boxes[:,0] = xmin
+        boxes[:,2] = xmax
+        return im_lr, boxes
 
 
 def produce_heat_map(center, map_size, stride,objects_size, sigma,magic_divide=100):
