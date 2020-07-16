@@ -53,7 +53,7 @@ class Train(object):
     net = EfficientDet(config, pretrained_backbone=False)
 
 
-    checkpoint = torch.load(config.MODEL.model_name+'.pth')
+    checkpoint = torch.load(cfg.MODEL.model_name+'.pth')
     #
     # for k, v in checkpoint.items():
     #     if 'predict' in k:
