@@ -46,14 +46,14 @@ class Train(object):
 
     self.device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 
-    config = get_efficientdet_config('tf_efficientdet_d5')
+    config = get_efficientdet_config(cfg.MODEL.model_name)
     config.num_classes=1
     config.image_size = cfg.DATA.hin
 
     net = EfficientDet(config, pretrained_backbone=False)
 
 
-    checkpoint = torch.load('./tf_efficientdet_d5.pth')
+    checkpoint = torch.load(config.MODEL.model_name+'.pth')
     #
     # for k, v in checkpoint.items():
     #     if 'predict' in k:
