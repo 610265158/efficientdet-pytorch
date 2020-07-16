@@ -381,9 +381,14 @@ class AnchorLabeler(object):
         anchor_box_list = BoxList(self.anchors.boxes)
         for i in range(batch_size):
             last_sample = i == batch_size - 1
+
+            chose_index=gt_classes[i]>0
+            cur_gt_classes=gt_classes[i][chose_index]
+            cur_gt_boxes = gt_boxes[i][chose_index]
+
             # cls_weights, box_weights are not used
             cls_targets, _, box_targets, _, matches = self.target_assigner.assign(
-                anchor_box_list, BoxList(gt_boxes[i]), gt_classes[i])
+                anchor_box_list, BoxList(cur_gt_boxes), cur_gt_classes)
 
             # class labels start from 1 and the background class = -1
             cls_targets -= 1

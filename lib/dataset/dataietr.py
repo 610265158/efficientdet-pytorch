@@ -432,18 +432,14 @@ class DsfdDataIter():
 
             if is_training:
 
-                sample_dice=random.uniform(0,1)
+
                 image, boxes = self.crazy_crop(dp)
 
                 if random.uniform(0, 1) > 0.5:
-                    image, boxes = Random_flip(image, boxes)
+                    image, boxes = Random_flip(image, boxes,updown=False)
+                if random.uniform(0, 1) > 0.5:
+                    image, boxes = Random_flip(image, boxes,updown=True)
 
-                boxes_ = boxes[:, 0:4]
-                klass_ = boxes[:, 4:]
-                angel = random.choice([0, 90, 180, 270])
-
-                image, boxes_ = Rotate_with_box(image, angel, boxes_)
-                boxes = np.concatenate([boxes_, klass_], axis=1)
                 ### align to target size
                 image, boxes = self.align_and_resize(image, boxes)
 
