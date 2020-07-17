@@ -9,7 +9,7 @@ from train_config import config as cfg
 import setproctitle
 
 
-setproctitle.setproctitle(cfg.MODEL.model_name)
+setproctitle.setproctitle(cfg.MODEL.model_name.split('_')[-1])
 
 
 def main():
