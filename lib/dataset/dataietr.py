@@ -344,22 +344,6 @@ class DsfdDataIter():
             boxes = np.concatenate([boxes_, klass_], axis=1)
 
 
-
-        ### align to target size
-        image, boxes = self.align_and_resize(image, boxes)
-
-        if random.uniform(0, 1) > 0.5:
-            image, boxes = Random_flip(image, boxes)
-
-        boxes_ = boxes[:, 0:4]
-        klass_ = boxes[:, 4:]
-        angel = random.choice([0, 90, 180, 270])
-
-        image, boxes_ = Rotate_with_box(image, angel, boxes_)
-        boxes = np.concatenate([boxes_, klass_], axis=1)
-
-
-
         return image,boxes
 
     def crazy_crop(self, dp):
@@ -433,18 +417,22 @@ class DsfdDataIter():
             if is_training:
 
 
-                image, boxes = self.crazy_crop(dp)
+                image, boxes = self.random_crop_sample(dp)
 
                 if random.uniform(0, 1) > 0.5:
                     image, boxes = Random_flip(image, boxes,updown=False)
-                if random.uniform(0, 1) > 0.5:
-                    image, boxes = Random_flip(image, boxes,updown=True)
+
+                ###random rotate
+                boxes_ = boxes[:, 0:4]
+                klass_ = boxes[:, 4:]
+                angel = random.choice([0, 90, 180, 270])
+
+                image, boxes_ = Rotate_with_box(image, angel, boxes_)
+                boxes = np.concatenate([boxes_, klass_], axis=1)
 
                 ### align to target size
                 image, boxes = self.align_and_resize(image, boxes)
 
-                image, boxes = self.random_affine(image, boxes)
-                
                 image = self.color_augmentor(image)
 
                 boxes_clean = []

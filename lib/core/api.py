@@ -63,7 +63,7 @@ class Detector():
         result=result[:,[1,0,3,2,4,5]]
         result[:, 0:4] = result[:, 0:4] / input_size * raw_image_size
 
-
+        result[:, 0:4]=np.clip(result[:, 0:4],0,1024)
         return result
 
     def py_nms(self, bboxes, iou_thres, score_thres, max_boxes=1000):
