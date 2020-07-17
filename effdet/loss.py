@@ -127,12 +127,11 @@ def _box_loss(anchor_boxes,box_outputs, box_targets, num_positives,cls_targets_n
     # delta is typically around the mean value of regression target.
     # for instances, the regression targets of 512x512 input with 6 anchors on
     # P3-P7 pyramid is about [0.1, 0.1, 0.2, 0.2].
-    # normalizer = num_positives * 4.0
-    # mask = box_targets != 0.0
-    # box_loss = huber_loss(box_targets, box_outputs, weights=mask, delta=delta, size_average=False)
-    # box_loss /= normalizer
-    box_loss = ciou_loss(anchor_boxes,box_outputs,box_targets,cls_targets_non_neg)
-
+    normalizer = num_positives * 4.0
+    mask = box_targets != 0.0
+    box_loss = huber_loss(box_targets, box_outputs, weights=mask, delta=delta, size_average=False)
+    box_loss /= normalizer
+    # box_loss = ciou_loss(anchor_boxes,box_outputs,box_targets,cls_targets_non_neg)
 
     return box_loss
 
