@@ -169,7 +169,7 @@ class Train(object):
 
 
         ##xyxy to yxyx
-        target['bbox'][:, [0, 1, 2, 3]] = target['bbox'][:, [1, 0, 3, 2]]
+        target['bbox'][:,:, [0, 1, 2, 3]] = target['bbox'][:,:, [1, 0, 3, 2]]
 
         loss_dict = self.model(data,target)
 
@@ -231,7 +231,7 @@ class Train(object):
                 target['cls'] = label_target
                 batch_size = data.shape[0]
 
-                target['bbox'][:, [0, 1, 2, 3]] = target['bbox'][:, [1, 0, 3, 2]]
+                target['bbox'][:,:, [0, 1, 2, 3]] = target['bbox'][:,:, [1, 0, 3, 2]]
 
                 loss_dict = self.model(data, target)
                 current_loss = loss_dict['loss']

@@ -60,7 +60,6 @@ class Detector():
 
         ##yxyx to xyxy
 
-        result=result[:,[1,0,3,2,4,5]]
         result[:, 0:4] = result[:, 0:4] / input_size * raw_image_size
 
         result[:, 0:4]=np.clip(result[:, 0:4],0,1024)
