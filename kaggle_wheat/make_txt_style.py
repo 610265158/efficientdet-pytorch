@@ -1,31 +1,64 @@
 import numpy as np
 import pandas as pd
 import os
+import random
+
+from sklearn.model_selection import StratifiedKFold
+
 data_dir='../global-wheat-detection/train'
 train_csv='../global-wheat-detection/train.csv'
+fold_used=0
 
 
-ratio=0.9
+marking = pd.read_csv(train_csv)
+
+bboxs = np.stack(marking['bbox'].apply(lambda x: np.fromstring(x[1:-1], sep=',')))
+for i, column in enumerate(['x', 'y', 'w', 'h']):
+    marking[column] = bboxs[:,i]
+marking.drop(columns=['bbox'], inplace=True)
+print(marking)
+skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+df_folds = marking[['image_id']].copy()
+df_folds.loc[:, 'bbox_count'] = 1
+df_folds = df_folds.groupby('image_id').count()
+df_folds.loc[:, 'source'] = marking[['image_id', 'source']].groupby('image_id').min()['source']
+df_folds.loc[:, 'stratify_group'] = np.char.add(
+    df_folds['source'].values.astype(str),
+    df_folds['bbox_count'].apply(lambda x: f'_{x // 15}').values.astype(str)
+)
+df_folds.loc[:, 'fold'] = 0
+
+for fold_number, (train_index, val_index) in enumerate(skf.split(X=df_folds.index, y=df_folds['stratify_group'])):
+    df_folds.loc[df_folds.iloc[val_index].index, 'fold'] = fold_number
+
+print(df_folds)
+
+
+
+
+train_list=df_folds[df_folds['fold'] != fold_used].index.values
+val_list=df_folds[df_folds['fold'] == fold_used].index.values
+
+
 
 train_data=pd.read_csv(train_csv)
 
 print(train_data)
 
 
-
 total_list_from_image=os.listdir(data_dir)
 total_list_from_image=[ x.split('.')[0] for x in total_list_from_image]
-
-
+#
+#
 image_ids=list(set(train_data['image_id']))
 
-emplty_image_list=[ x for x in total_list_from_image if x not in image_ids]
 
+#
+emplty_image_list=[ x for x in total_list_from_image if x not in image_ids]
+#
 print('the image has no label',emplty_image_list)
 
-
-train_list=image_ids[:int(ratio*len(image_ids))]
-val_list=image_ids[int(ratio*len(image_ids)):]
 
 klasses=set(train_data['source'])
 
