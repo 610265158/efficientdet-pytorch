@@ -415,9 +415,8 @@ class DsfdDataIter():
         try:
 
             if is_training:
-
-
-                image, boxes = self.random_crop_sample(dp)
+                image, boxes = self.crazy_crop(dp)
+                image,boxes =self.random_affine(image,boxes)
 
                 if random.uniform(0, 1) > 0.5:
                     image, boxes = Random_flip(image, boxes,updown=False)
@@ -586,7 +585,7 @@ class DataIter():
                                   is_training=self.training_flag)
         if not self.training_flag:
             self.process_num=1
-        ds = MultiProcessPrefetchData(ds, self.prefetch_size, self.process_num)
+        # ds = MultiProcessPrefetchData(ds, self.prefetch_size, self.process_num)
         ds.reset_state()
         ds = ds.get_data()
         return ds
