@@ -222,7 +222,7 @@ def Random_crop(src,shrink):
 
     return target_img
 
-def box_in_img(img,boxes,min_overlap=0.5):
+def box_in_img(img,boxes,min_overlap=0.25):
 
     raw_bboxes = np.array(boxes)
 
@@ -288,9 +288,9 @@ def Random_scale_withbbox(image,bboxes,target_shape,jitter=0.5):
 
     croped_h_w_ratio=croped_h/croped_w
 
-    rescale_h=int(h * random.uniform(0.5, 1))
+    rescale_h=h
 
-    rescale_w = int(rescale_h/(random.uniform(0.7, 1.3)*croped_h_w_ratio))
+    rescale_w = int(rescale_h/(random.uniform(0.9, 1.1)*croped_h_w_ratio))
     rescale_w=np.clip(rescale_w,0,w)
 
     image=cv2.resize(croped,(rescale_w,rescale_h))
