@@ -585,7 +585,7 @@ class DataIter():
                                   is_training=self.training_flag)
         if not self.training_flag:
             self.process_num=1
-        # ds = MultiProcessPrefetchData(ds, self.prefetch_size, self.process_num)
+        ds = MultiProcessPrefetchData(ds, self.prefetch_size, self.process_num)
         ds.reset_state()
         ds = ds.get_data()
         return ds
