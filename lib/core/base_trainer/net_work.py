@@ -82,20 +82,18 @@ class Train(object):
     param_optimizer = list(self.model.named_parameters())
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.001},
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': cfg.TRAIN.weight_decay_factor},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
 
     if 'Adamw' in cfg.TRAIN.opt:
 
       self.optimizer = torch.optim.AdamW(self.model.parameters(),
-                                         lr=self.init_lr,eps=1.e-5,
-                                         weight_decay=cfg.TRAIN.weight_decay_factor)
+                                         lr=self.init_lr,eps=1.e-5)
     else:
       self.optimizer = torch.optim.SGD(self.model.parameters(),
                                        lr=self.init_lr,
-                                       momentum=0.9,
-                                       weight_decay=cfg.TRAIN.weight_decay_factor)
+                                       momentum=0.9)
 
 
 
