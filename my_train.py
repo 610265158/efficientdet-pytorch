@@ -9,7 +9,7 @@ from train_config import config as cfg
 import setproctitle
 
 
-setproctitle.setproctitle("alaska")
+setproctitle.setproctitle(cfg.MODEL.model_name)
 
 
 def main():
