@@ -79,6 +79,13 @@ class Train(object):
     self.mean = torch.tensor( cfg.DATA.IMAGENET_DEFAULT_MEAN).to(self.device).view(1, 3, 1, 1)
     self.std = torch.tensor(cfg.DATA.IMAGENET_DEFAULT_STD).to(self.device).view(1, 3, 1, 1)
 
+    param_optimizer = list(self.model.named_parameters())
+    no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+    optimizer_grouped_parameters = [
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.001},
+        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+    ]
+
     if 'Adamw' in cfg.TRAIN.opt:
 
       self.optimizer = torch.optim.AdamW(self.model.parameters(),
