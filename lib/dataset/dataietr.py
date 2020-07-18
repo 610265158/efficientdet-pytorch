@@ -123,8 +123,22 @@ class MutiScaleBatcher(BatchData):
 
             if len(holder) == self.batch_size:
 
+
+                if self.scale_range is not None:
+                    cur_shape,cur_batch_size=random.choice(self.scale_range)
+
+                    holder=random.sample(holder,cur_batch_size)
+
                 padd_holder = []
                 for j,item in enumerate(holder):
+                    if self.scale_range is not None:
+                        image=item[0]
+                        boxes=item[1]
+                        labels=item[2]
+
+                        image, boxes = self.align_resize(image,boxes,target_height=cur_shape,target_width=cur_shape)
+
+                        item[0],item[1]= image, boxes
                     image=np.ascontiguousarray(item[0])
 
                     image=np.transpose(image,axes=[2,0,1]).astype(np.uint8)
@@ -148,13 +162,9 @@ class MutiScaleBatcher(BatchData):
 
     def place_image(self,img_raw,target_height,target_width):
 
-
-
         channel = img_raw.shape[2]
         raw_height = img_raw.shape[0]
         raw_width = img_raw.shape[1]
-
-
 
         start_h=random.randint(0,target_height-raw_height)
         start_w=random.randint(0,target_width-raw_width)
@@ -586,7 +596,7 @@ class DataIter():
 
         if cfg.DATA.mutiscale and self.training_flag:
             ds = MutiScaleBatcher(ds, self.num_gpu * self.batch_size,
-                                  scale_range=cfg.DATA.scales,
+                                  scale_range=cfg.DATA.scale_choice,
                                   input_size=(cfg.DATA.hin, cfg.DATA.win),
                                   is_training=self.training_flag)
         else:

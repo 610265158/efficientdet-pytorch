@@ -51,7 +51,7 @@ config.DATA.root_path=''
 config.DATA.train_txt_path='train.txt'
 config.DATA.val_txt_path='val.txt'
 config.DATA.mutiscale=False
-
+config.DATA.scale_choice=[(512,16),(640,12),(768,6),(896,4),(1024,4)]
 config.DATA.hin = 512                                        # input size during training , 128,160,   depends on
 config.DATA.win = 512
 
