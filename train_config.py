@@ -36,7 +36,7 @@ config.TRAIN.epoch = 100
 
 config.TRAIN.init_lr=5.e-4
 
-config.TRAIN.weight_decay_factor = 5.e-4                                   ####l2
+config.TRAIN.weight_decay_factor = 1.e-3                                   ####l2
 config.TRAIN.vis=False
 config.TRAIN.mix_precision=True
 
@@ -58,7 +58,7 @@ config.DATA.win = 512
 config.DATA.IMAGENET_DEFAULT_MEAN = [ x *255 for x in (0.485, 0.456, 0.406)]
 config.DATA.IMAGENET_DEFAULT_STD = [x *255 for x in  (0.229, 0.224, 0.225)]
 config.DATA.max_boxes=300
-config.DATA.cover_obj=5
+config.DATA.cover_obj=3
 
 
 config.DATA.mixup=0.5

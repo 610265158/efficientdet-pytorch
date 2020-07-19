@@ -423,31 +423,22 @@ class DsfdDataIter():
         """Data augmentation function."""
         ####customed here
         try:
-            fname, annos = dp
-            image = self.cv2_read_rgb(fname)
-            labels = annos.split(' ')
-            boxes = []
 
-            for label in labels:
-                bbox = np.array(label.split(','), dtype=np.float)
-                boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]])
-
-            boxes = np.array(boxes, dtype=np.float)
 
             if is_training:
-                image, boxes = Random_scale_withbbox(image, boxes, target_shape=[cfg.DATA.hin, cfg.DATA.win],
-                                                     jitter=0.3)
+                image, boxes = self.random_crop_sample(dp)
 
                 if random.uniform(0, 1) > 0.5:
                     image, boxes = Random_flip(image, boxes,updown=False)
-
-                ###random rotate
-                boxes_ = boxes[:, 0:4]
-                klass_ = boxes[:, 4:]
-                angel = random.choice([0, 90, 180, 270])
-
-                image, boxes_ = Rotate_with_box(image, angel, boxes_)
-                boxes = np.concatenate([boxes_, klass_], axis=1)
+                if random.uniform(0, 1) > 0.5:
+                    image, boxes = Random_flip(image, boxes,updown=True)
+                # ###random rotate
+                # boxes_ = boxes[:, 0:4]
+                # klass_ = boxes[:, 4:]
+                # angel = random.choice([0, 90, 180, 270])
+                #
+                # image, boxes_ = Rotate_with_box(image, angel, boxes_)
+                # boxes = np.concatenate([boxes_, klass_], axis=1)
 
                 ### align to target size
                 image, boxes = self.align_and_resize(image, boxes)
