@@ -6,13 +6,14 @@ import numpy as np
 import cv2
 import os
 import pandas as pd
-
+import matplotlib.pyplot as plt
 
 from lib.core.api import Detector
+
+
 data_dir='../global-wheat-detection/test'
 
-
-model_path='./epoch_287_val_loss1.227091.pth'
+model_path='./epoch_99_val_loss1.162587.pth'
 
 
 image_list=os.listdir(data_dir)
@@ -20,8 +21,8 @@ image_list=[x for x in image_list if 'jpg' in x]
 detector=Detector(model_path)
 
 results=[]
-
-score_thres=0.05
+iou_thres=0.5
+score_thres=0.3
 show_flag=True
 
 def format_prediction_string(boxes):
@@ -40,7 +41,7 @@ for pic in image_list:
 
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    out_boxes=detector(image,640,1024,iou_thres=0.5,score_thres=0.05)
+    out_boxes=detector.complex_call(image,1024,iou_thres=iou_thres,score_thres=score_thres)
 
     if show_flag:
         for i in range(out_boxes.shape[0]):
@@ -54,9 +55,10 @@ for pic in image_list:
 
                 cv2.rectangle(image, (xmin, ymin), (xmax, ymax), (0, 255, 0), 3)
 
-        cv2.namedWindow('res',0)
-        cv2.imshow('res',image)
-        cv2.waitKey(0)
+        plt.imshow(image)  # 显示图片
+        plt.axis('off')  # 不显示坐标轴
+        plt.show()
+
     cur_image_id=pic.split('.')[0]
 
     cur_detect_result=format_prediction_string(out_boxes)
@@ -69,5 +71,5 @@ for pic in image_list:
 
 
 test_df = pd.DataFrame(results, columns=['image_id', 'PredictionString'])
-test_df.to_csv('submission.csv', index=False)
-test_df.head()
+test_df.to_csv('../submission.csv', index=False)
+test_df.head(10)
