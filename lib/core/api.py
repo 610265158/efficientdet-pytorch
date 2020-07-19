@@ -70,13 +70,14 @@ class Detector():
     def complex_call(self,img,raw_image_size=1024,iou_thres=0.5,score_thres=0.05):
 
 
-        result1 =self.four_rotate_call(img,input_size=512,raw_image_size=raw_image_size)
-
+        # result1 =self.four_rotate_call(img,input_size=512,raw_image_size=raw_image_size)
+        #
         result2 = self.four_rotate_call(img, input_size=640, raw_image_size=raw_image_size)
+        #
+        #result3 = self.four_rotate_call(img, input_size=768, raw_image_size=raw_image_size)
+        #
+        result = np.concatenate([result2 ], axis=0)
 
-        result3 = self.four_rotate_call(img, input_size=768, raw_image_size=raw_image_size)
-
-        result = np.concatenate([result1, result2,result3 ], axis=0)
 
         result = self.py_nms(result, iou_thres=iou_thres, score_thres=score_thres, max_boxes=1000)
 
@@ -114,51 +115,29 @@ class Detector():
 
         output=output.cpu().numpy()
 
-        output0=output[0]
-        result0=self.py_nms(output0,iou_thres=iou_thres,score_thres=score_thres,max_boxes=2000)
 
-        output1 = output[1]
-        result1 = self.py_nms(output1, iou_thres=iou_thres, score_thres=score_thres, max_boxes=2000)
-        result1 = self.Rotate_with_box(img,angle=-90,boxes=result1)
+        output[1] = self.Rotate_with_box(img,angle=-90,boxes=output[1])
 
+        output[2] = self.Rotate_with_box(img, angle=-180, boxes=output[2])
 
-        output2 = output[2]
-        result2 = self.py_nms(output2, iou_thres=iou_thres, score_thres=score_thres, max_boxes=2000)
-        result2 = self.Rotate_with_box(img, angle=-180, boxes=result2)
+        output[3] = self.Rotate_with_box(img, angle=-270, boxes=output[3])
+        # # ###
+        # #
+        # # ###flip
+        #
+        output[4]=self.Flip_with_box(img,output[4])
+        #
+        output[5] = self.Rotate_with_box(img, angle=-90, boxes=output[5])
+        output[5] = self.Flip_with_box(img, output[5])
 
+        output[6] = self.Rotate_with_box(img, angle=-180, boxes=output[6])
+        output[6] = self.Flip_with_box(img, output[6])
 
-        output3 = output[3]
-        result3 = self.py_nms(output3, iou_thres=iou_thres, score_thres=score_thres, max_boxes=2000)
-        result3 = self.Rotate_with_box(img,  angle=-270, boxes=result3)
-
-
-        ###
-
-        ###flip
-        output4 = output[4]
-        result4 = self.py_nms(output4, iou_thres=iou_thres, score_thres=score_thres, max_boxes=2000)
-        result4=self.Flip_with_box(img,result4)
-
-        output5 = output[5]
-        result5 = self.py_nms(output5, iou_thres=iou_thres, score_thres=score_thres, max_boxes=2000)
-        result5 = self.Rotate_with_box(img, angle=-90, boxes=result5)
-        result5 = self.Flip_with_box(img, result5)
+        output[7] = self.Rotate_with_box(img, angle=-270, boxes=output[7])
+        output[7] = self.Flip_with_box(img, output[7])
 
 
-        output6 = output[6]
-        result6 = self.py_nms(output6, iou_thres=iou_thres, score_thres=score_thres, max_boxes=2000)
-        result6 = self.Rotate_with_box(img, angle=-180, boxes=result6)
-        result6 = self.Flip_with_box(img, result6)
-
-
-        output7 = output[7]
-        result7 = self.py_nms(output7, iou_thres=iou_thres, score_thres=score_thres, max_boxes=2000)
-        result7 = self.Rotate_with_box(img, angle=-270, boxes=result7)
-        result7 = self.Flip_with_box(img, result7)
-
-        result=np.concatenate([result0,result1,result2,result3,result4,result5,result6,result7],axis=0)
-
-        result = self.py_nms(result, iou_thres=iou_thres, score_thres=score_thres, max_boxes=2000)
+        result=output.reshape([-1,6])
 
         ##yxyx to xyxy
 
