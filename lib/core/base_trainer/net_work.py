@@ -8,7 +8,7 @@ import torch
 
 import torch.nn as nn
 import numpy as np
-
+import random
 import timm
 
 
@@ -29,6 +29,17 @@ from lib.core.base_trainer.metric import AverageMeter
 from lib.utils.torch_utils import EMA
 
 
+def mixup(data, target_boxes,target_labels, alpha):
+    indices = torch.randperm(data.size(0))
+    shuffled_data = data[indices]
+    shuffled_target_boxes = target_boxes[indices]
+    shuffled_target_labels = target_labels[indices]
+
+    lam = np.random.beta(alpha, alpha)
+    data = data * lam + shuffled_data * (1 - lam)
+    new_target_boxes=torch.cat([target_boxes,shuffled_target_boxes],1)
+    new_target_labels = torch.cat([target_labels, shuffled_target_labels], 1)
+    return data, new_target_boxes,new_target_labels,lam
 
 
 
@@ -153,28 +164,51 @@ class Train(object):
 
         start=time.time()
 
-        images, boxes_target,label_target = self.train_ds()
+
+        if random.uniform(0,1)<cfg.DATA.mixup:
+            images, boxes_target, label_target = self.train_ds()
+
+            data = torch.from_numpy(images).to(self.device).float().sub_(self.mean).div_(self.std)
+            boxes_target = torch.from_numpy(boxes_target).to(self.device).float()
+            label_target = torch.from_numpy(label_target).to(self.device).float()
 
 
-        data = torch.from_numpy(images).to(self.device).float().sub_(self.mean).div_(self.std)
-        boxes_target = torch.from_numpy(boxes_target).to(self.device).float()
-        label_target= torch.from_numpy(label_target).to(self.device).float()
+            alpha=0.5
+            data,boxes_target,label_target,alpha=mixup(data,boxes_target,label_target,alpha)
+
+            target = {}
+            target['bbox'] = boxes_target
+            target['cls'] = label_target
+            batch_size = data.shape[0]
+            ##xyxy to yxyx
+            target['bbox'][:, :, [0, 1, 2, 3]] = target['bbox'][:, :, [1, 0, 3, 2]]
+
+            loss_dict = self.model(data, target)
+
+            current_loss = loss_dict['loss']*alpha
+            summary_loss.update(current_loss.detach().item(), batch_size)
 
 
-        target={}
-        target['bbox']=boxes_target
-        target['cls']=label_target
-        batch_size = data.shape[0]
+        else:
+
+            images, boxes_target,label_target = self.train_ds()
 
 
+            data = torch.from_numpy(images).to(self.device).float().sub_(self.mean).div_(self.std)
+            boxes_target = torch.from_numpy(boxes_target).to(self.device).float()
+            label_target= torch.from_numpy(label_target).to(self.device).float()
 
-        ##xyxy to yxyx
-        target['bbox'][:,:, [0, 1, 2, 3]] = target['bbox'][:,:, [1, 0, 3, 2]]
+            target={}
+            target['bbox']=boxes_target
+            target['cls']=label_target
+            batch_size = data.shape[0]
+            ##xyxy to yxyx
+            target['bbox'][:,:, [0, 1, 2, 3]] = target['bbox'][:,:, [1, 0, 3, 2]]
 
-        loss_dict = self.model(data,target)
+            loss_dict = self.model(data,target)
 
-        current_loss=loss_dict['loss']
-        summary_loss.update(current_loss.detach().item(), batch_size)
+            current_loss=loss_dict['loss']
+            summary_loss.update(current_loss.detach().item(), batch_size)
 
 
         self.optimizer.zero_grad()
