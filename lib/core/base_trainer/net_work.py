@@ -35,7 +35,7 @@ def mixup(data, target_boxes,target_labels, alpha):
     shuffled_target_boxes = target_boxes[indices]
     shuffled_target_labels = target_labels[indices]
 
-    lam = np.random.beta(alpha, alpha)
+    lam = 0.5
     data = data * lam + shuffled_data * (1 - lam)
     new_target_boxes=torch.cat([target_boxes,shuffled_target_boxes],1)
     new_target_labels = torch.cat([target_labels, shuffled_target_labels], 1)

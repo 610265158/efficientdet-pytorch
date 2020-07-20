@@ -12,6 +12,22 @@ import setproctitle
 setproctitle.setproctitle(cfg.MODEL.model_name.split('_')[-1])
 
 
+def mixup(data, target_boxes,target_labels, alpha):
+    indices = np.arange(data.shape[0])
+    np.random.shuffle(indices)
+    print(indices)
+    shuffled_data = data[indices,...]
+    shuffled_target_boxes = target_boxes[indices,...]
+    shuffled_target_labels = target_labels[indices,...]
+
+
+    data = data * 0.5 + shuffled_data * 0.5
+
+    new_target_boxes=np.concatenate([target_boxes,shuffled_target_boxes],1)
+    new_target_labels = np.concatenate([target_labels, shuffled_target_labels], 1)
+    return data, new_target_boxes,new_target_labels,0.5
+
+
 def main():
 
 
@@ -30,6 +46,11 @@ def main():
         for step in range(train_ds.size):
 
             images, boxes,labels=train_ds()
+
+            images=images.astype(np.float32)
+
+            if cfg.DATA.mixup:
+                images, boxes, labels,lam=mixup(images, boxes,labels,0.5)
             print('xxx')
             print(images.shape)
 
