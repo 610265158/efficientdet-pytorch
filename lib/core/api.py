@@ -8,7 +8,7 @@ from effdet.efficientdet import HeadNet
 from train_config import config as cfg
 import cv2
 
-
+from lib.core.wbf import weighted_boxes_fusion
 
 
 class Detector():
@@ -39,9 +39,22 @@ class Detector():
         self.std = torch.tensor(cfg.DATA.IMAGENET_DEFAULT_MEAN).to(self.device).view(1, 3, 1, 1)
 
 
-    def __call__(self, img, input_size=640,raw_image_size=1024,iou_thres=0.5,score_thres=0.05):
+    def __call__(self, image, input_size=640,iou_thres=0.5,score_thres=0.05):
 
-        img = cv2.resize(img, (input_size, input_size))
+        raw_h, raw_w, _ = image.shape
+
+        max_edge = max(raw_h, raw_w)
+
+        scale = input_size / max_edge
+
+        img_resized = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+
+        img = np.full(shape=[input_size, input_size, 3], fill_value=cfg.DATA.IMAGENET_DEFAULT_MEAN)
+
+        resized_h, resized_w, _ = img_resized.shape
+        img[:resized_h, :resized_w, :] = img_resized
+
+
         img=np.transpose(img,axes=[2,0,1])
         img=np.expand_dims(img,0)
         data = torch.from_numpy(img).to(self.device).float()
@@ -56,39 +69,56 @@ class Detector():
 
         result=self.py_nms(output,iou_thres=iou_thres,score_thres=score_thres,max_boxes=2000)
 
-        ##yxyx to xyxy
+        ###scale back to raw image
+        result[:, 0:4] = result[:, 0:4] / scale
 
-        result[:, 0:4] = result[:, 0:4] / input_size * raw_image_size
+        ##clip
+        result[:, 0:2][result[:, 0:2] < 0] = 0
 
-        result[:, 0:4]=np.clip(result[:, 0:4],0,1024)
-
-
-
-        return result
-
-
-    def complex_call(self,img,raw_image_size=1024,iou_thres=0.5,score_thres=0.05):
-
-
-        # result1 =self.four_rotate_call(img,input_size=512,raw_image_size=raw_image_size)
-        #
-        result2 = self.four_rotate_call(img, input_size=640, raw_image_size=raw_image_size)
-        #
-        #result3 = self.four_rotate_call(img, input_size=768, raw_image_size=raw_image_size)
-        #
-        result = np.concatenate([result2 ], axis=0)
-
-
-        result = self.py_nms(result, iou_thres=iou_thres, score_thres=score_thres, max_boxes=1000)
+        result[:, 3][result[:, 3] > raw_w - 1] = raw_w - 1
+        result[:, 4][result[:, 4] > raw_h - 1] = raw_h - 1
 
         return result
 
 
+    def complex_call(self,img,iou_thres=0.5,score_thres=0.05):
 
 
-    def four_rotate_call(self,image,input_size=640,raw_image_size=1024,iou_thres=0.5,score_thres=0.05):
+        result1 =self.four_rotate_call(img,input_size=512)
+        result1 = self.py_nms(result1, iou_thres=iou_thres, score_thres=score_thres, max_boxes=1000)
+        bbox_1=(result1[:,:4]/1024).tolist()
+        score_1=result1[:,4].tolist()
+        label_1=result1[:,5].tolist()
 
-        img = cv2.resize(image, (input_size, input_size),cv2.INTER_LINEAR)
+        bb,ss,ll=weighted_boxes_fusion([bbox_1],[score_1],[label_1])
+
+        bb=bb*1024
+        ss=np.expand_dims(ss,axis=1)
+        ll = np.expand_dims(ll, axis=1)
+
+        result=np.concatenate([bb,ss,ll],axis=1)
+
+        return result
+
+
+
+
+    def four_rotate_call(self,image,input_size=640):
+
+        raw_h,raw_w,_=image.shape
+
+        max_edge=max(raw_h,raw_w)
+
+        scale=input_size/max_edge
+
+        img_resized = cv2.resize(image,None, fx=scale,fy=scale,interpolation=cv2.INTER_LINEAR)
+
+        img=np.full(shape=[input_size,input_size,3],fill_value=cfg.DATA.IMAGENET_DEFAULT_MEAN)
+
+
+
+        resized_h,resized_w,_=img_resized.shape
+        img[:resized_h,:resized_w,:]=img_resized
 
         img_rotate_90=np.rot90(img,1)
         img_rotate_180 = np.rot90(img, 2)
@@ -115,18 +145,16 @@ class Detector():
 
         output=output.cpu().numpy()
 
-
         output[1] = self.Rotate_with_box(img,angle=-90,boxes=output[1])
 
         output[2] = self.Rotate_with_box(img, angle=-180, boxes=output[2])
 
         output[3] = self.Rotate_with_box(img, angle=-270, boxes=output[3])
-        # # ###
-        # #
+
         # # ###flip
         #
         output[4]=self.Flip_with_box(img,output[4])
-        #
+
         output[5] = self.Rotate_with_box(img, angle=-90, boxes=output[5])
         output[5] = self.Flip_with_box(img, output[5])
 
@@ -136,15 +164,17 @@ class Detector():
         output[7] = self.Rotate_with_box(img, angle=-270, boxes=output[7])
         output[7] = self.Flip_with_box(img, output[7])
 
-
+        ###cat
         result=output.reshape([-1,6])
 
-        ##yxyx to xyxy
+        ###scale back to raw image
+        result[:, 0:4] = result[:, 0:4] / scale
 
-        result[:, 0:4] = result[:, 0:4] / input_size * raw_image_size
+        ##clip
+        result[:, 0:2][result[:, 0:2]<0]=0
 
-        result[:, 0:4]=np.clip(result[:, 0:4],0,1024)
-
+        result[:, 3][result[:,3] >raw_w-1] = raw_w-1
+        result[:, 4][result[:, 4] > raw_h - 1] = raw_h - 1
 
 
         return result
