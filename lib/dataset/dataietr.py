@@ -261,7 +261,7 @@ class DsfdDataIter():
         boxes_[:, 2] /= w
         boxes_[:, 3] /= h
         image = image.astype(np.uint8)
-        image = cv2.resize(image, (cfg.DATA.win, cfg.DATA.hin))
+        image = cv2.resize(image, (cfg.DATA.win, cfg.DATA.hin),interpolation=cv2.INTER_LINEAR)
 
         boxes_[:, 0] *= cfg.DATA.win
         boxes_[:, 1] *= cfg.DATA.hin
@@ -423,41 +423,29 @@ class DsfdDataIter():
         """Data augmentation function."""
         ####customed here
         try:
+            fname, annos = dp
+            image = self.cv2_read_rgb(fname)
+            labels = annos.split(' ')
+            boxes = []
 
+            for label in labels:
+                bbox = np.array(label.split(','), dtype=np.float)
+                boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]])
+
+            boxes = np.array(boxes, dtype=np.float)
 
             if is_training:
-                image, boxes = self.random_crop_sample(dp)
+                image, boxes = self.Random_scale_withbbox(image, boxes, target_shape=[cfg.DATA.hin, cfg.DATA.win],
+                                                 jitter=0.3)
 
                 if random.uniform(0, 1) > 0.5:
                     image, boxes = Random_flip(image, boxes,updown=False)
-                # if random.uniform(0, 1) > 0.5:
-                #     image, boxes = Random_flip(image, boxes,updown=True)
-                
-                ###random rotate
-                boxes_ = boxes[:, 0:4]
-                klass_ = boxes[:, 4:]
-                angel = random.choice([0, 90, 180, 270])
-
-                image, boxes_ = Rotate_with_box(image, angel, boxes_)
-                boxes = np.concatenate([boxes_, klass_], axis=1)
+                if random.uniform(0, 1) > 0.5:
+                    image, boxes = Random_flip(image, boxes,updown=True)
 
                 ### align to target size
                 image, boxes = self.align_and_resize(image, boxes)
 
-                image = self.color_augmentor(image)
-
-                boxes_clean = []
-                for i in range(boxes.shape[0]):
-                    box = boxes[i]
-
-                    if (box[3] - box[1]) < cfg.DATA.cover_obj or (box[2] - box[0]) < cfg.DATA.cover_obj:
-                        image[int(box[1]):int(box[3]), int(box[0]):int(box[2]), :] = np.array(cfg.DATA.IMAGENET_DEFAULT_MEAN,
-                                                                                              dtype=image.dtype)
-                        continue
-                    else:
-                        boxes_clean.append(box)
-
-                boxes=np.array(boxes_clean)
             else:
 
                image,boxes=self.eval_sample(dp)
