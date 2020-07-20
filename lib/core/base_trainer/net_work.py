@@ -124,7 +124,7 @@ class Train(object):
 
     self.val_ds = val_ds
 
-    self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,mode='small', patience=4,verbose=True)
+    self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,mode='min', patience=4,verbose=True)
     # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR( self.optimizer, self.epochs,eta_min=1.e-6)
 
 
