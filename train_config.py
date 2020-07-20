@@ -41,7 +41,7 @@ config.TRAIN.vis=False
 config.TRAIN.mix_precision=True
 
 
-config.TRAIN.warmup_step=1500
+config.TRAIN.warmup_step=1000
 config.TRAIN.opt='Adamw'
 config.TRAIN.ema=False
 
