@@ -418,7 +418,11 @@ class DsfdDataIter():
 
         for label in labels:
             bbox = np.array(label.split(','), dtype=np.float)
-            boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]])
+            if bbox[4]==0:
+                ###it is fake data we will drop it
+                boxes.append([0,0,1,1, bbox[4]])
+            else:
+                boxes.append([bbox[0], bbox[1], bbox[2], bbox[3], bbox[4]])
 
         boxes = np.array(boxes, dtype=np.float)
 
@@ -494,8 +498,19 @@ class DsfdDataIter():
                 boxes_=np.array(transformed['bboxes'])
                 klasses_=np.expand_dims(np.array(transformed['labels']),1)
 
-                boxes=np.concatenate([boxes_,klasses_],axis=1)
 
+
+
+
+                ##### below process is litlle bit ugly, but it is ok now
+                if klasses_.shape[0]==0:
+                    boxes_ = np.array([[0, 0, 0, 0]])
+                    klasses_ = np.array([[0]])
+
+                boxes = np.concatenate([boxes_, klasses_], axis=1)
+
+                ###### if label is 0 set box as 0,0,0,0
+                boxes = boxes * boxes[:, 4:5]
 
             else:
 
@@ -631,7 +646,7 @@ class DataIter():
                                   is_training=self.training_flag)
         if not self.training_flag:
             self.process_num=1
-        # ds = MultiProcessPrefetchData(ds, self.prefetch_size, self.process_num)
+        ds = MultiProcessPrefetchData(ds, self.prefetch_size, self.process_num)
         ds.reset_state()
         ds = ds.get_data()
         return ds
