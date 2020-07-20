@@ -61,7 +61,7 @@ config.DATA.max_boxes=300
 config.DATA.cover_obj=3
 
 
-config.DATA.mixup=0.5
+config.DATA.mixup=0.0
 config.MODEL = edict()
 config.MODEL.model_name='tf_efficientdet_d2'
 config.MODEL.model_path = './models/'                                        ## save directory
