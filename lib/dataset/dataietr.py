@@ -435,7 +435,7 @@ class DsfdDataIter():
             boxes = np.array(boxes, dtype=np.float)
 
             if is_training:
-                image, boxes = self.Random_scale_withbbox(image, boxes, target_shape=[cfg.DATA.hin, cfg.DATA.win],
+                image, boxes = Random_scale_withbbox(image, boxes, target_shape=[cfg.DATA.hin, cfg.DATA.win],
                                                  jitter=0.3)
 
                 if random.uniform(0, 1) > 0.5:
