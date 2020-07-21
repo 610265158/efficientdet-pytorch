@@ -19,6 +19,7 @@ from lib.core.api import Detector
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--model", required=False, default='./model/detector.pb', help="model to eval:")
+ap.add_argument("--rootpath", required=False, default='', help="model to eval:")
 ap.add_argument("--annFile", required=False, default='./Val_cocoStyle.json', help="coco style json")
 ap.add_argument("--is_show", required=False, default=0,type=int, help="show result or not?")
 args = ap.parse_args()
@@ -47,32 +48,34 @@ coco_map = {0: (1, 'person'), 1: (2, 'bicycle'), 2: (3, 'car'), 3: (4, 'motorcyc
 
 
 def predict_box():
+    ROOT_PATH= args.rootpath
     MODEL_PATH = args.model
     detector = Detector(MODEL_PATH)
     annFile = args.annFile
     cocoGt = COCO(annFile)
     catIds = cocoGt.getCatIds()
+    print(catIds)
 
-    imgIds = sorted(cocoGt.getImgIds(catIds=catIds))
-
+    imgIds = sorted(cocoGt.getImgIds())
+    print(imgIds)
     res_coco = []
 
     for img_id in tqdm(imgIds):
 
+
         fname=cocoGt.loadImgs(img_id)[0]['file_name']
 
+        fname=os.path.join(ROOT_PATH,fname)
 
 
         image = cv2.imread(fname)
         image_show = image.copy()
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-
-
         h, w, _ = image.shape
 
 
-        detect_res =detector(image,640,iou_thres=0.5,score_thres=0.03)
+        detect_res =detector(image,768,iou_thres=0.5,score_thres=0.03)
 
 
 
@@ -83,12 +86,15 @@ def predict_box():
         if args.is_show:
             for i in range(detect_res.shape[0]):
                 one_box = detect_res[i]
-                str_draw = ' score:' + str(one_box[4])
+                str_draw =  str(int(one_box[5]))+' score:' + str(one_box[4])
                 if one_box[4]>0.3:
                     cv2.rectangle(image_show, (int(one_box[0]), int(one_box[1])), (int(one_box[2]), int(one_box[3])),
                                   (0, 255, 0), 2)
                     cv2.putText(image_show, str_draw, (int(one_box[0]), int(one_box[1])), cv2.FONT_HERSHEY_SIMPLEX, 2,
                                 (0, 255, 0), 3)
+
+
+            # cv2.imwrite('./tmp/'+str(img_id)+'.jpg',image_show)
             cv2.namedWindow('ss',0)
             cv2.imshow('ss', image_show)
             cv2.waitKey(0)
@@ -96,12 +102,13 @@ def predict_box():
         for i in range(detect_res.shape[0]):
             one_box = detect_res[i]
 
-
+            if one_box[4] < .001:  # stop when below this threshold, scores in descending order
+                continue
             one_box=[float(x) for x in one_box]
             box = [one_box[0], one_box[1], one_box[2] - one_box[0], one_box[3] - one_box[1]]
             res_coco.append({
                 'bbox': box,
-                'category_id': 1,
+                'category_id': int(one_box[5]),
                 'image_id': img_id,
                 'score': one_box[4]
             })

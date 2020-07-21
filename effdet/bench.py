@@ -49,12 +49,12 @@ def _post_process(config, cls_outputs, box_outputs):
 
 
 @torch.jit.script
-def _batch_detection(batch_size: int, class_out, box_out, anchor_boxes, indices, classes):
+def _batch_detection(batch_size: int, class_out, box_out, anchor_boxes, indices, classes, img_scale, img_size):
     batch_detections = []
     # FIXME we may be able to do this as a batch with some tensor reshaping/indexing, PR welcome
     for i in range(batch_size):
         detections = generate_detections(
-            class_out[i], box_out[i], anchor_boxes, indices[i], classes[i])
+            class_out[i], box_out[i], anchor_boxes, indices[i], classes[i], img_scale[i], img_size[i])
         batch_detections.append(detections)
     return torch.stack(batch_detections, dim=0)
 
@@ -64,18 +64,22 @@ class DetBenchPredict(nn.Module):
         super(DetBenchPredict, self).__init__()
         self.config = config
         self.model = model
+        self.anchors = Anchors(
+            config.min_level, config.max_level,
+            config.num_scales, config.aspect_ratios,
+            config.anchor_scale, config.image_size)
 
+    def forward(self, x, img_scales, img_size):
 
-    def forward(self, x,rect_size):
+        x_shape=x.shape[3]
         self.anchors = Anchors(
             self.config.min_level, self.config.max_level,
             self.config.num_scales, self.config.aspect_ratios,
-            self.config.anchor_scale, rect_size)
-
+            self.config.anchor_scale,x_shape)
         class_out, box_out = self.model(x)
         class_out, box_out, indices, classes = _post_process(self.config, class_out, box_out)
         return _batch_detection(
-            x.shape[0], class_out, box_out, self.anchors.boxes, indices, classes)
+            x.shape[0], class_out, box_out, self.anchors.boxes, indices, classes, img_scales, img_size)
 
 
 class DetBenchTrain(nn.Module):
@@ -83,29 +87,25 @@ class DetBenchTrain(nn.Module):
         super(DetBenchTrain, self).__init__()
         self.config = config
         self.model = model
-
-
+        self.anchors = Anchors(
+            config.min_level, config.max_level,
+            config.num_scales, config.aspect_ratios,
+            config.anchor_scale, config.image_size)
+        self.anchor_labeler = AnchorLabeler(self.anchors, config.num_classes, match_threshold=0.5)
         self.loss_fn = DetectionLoss(self.config)
 
     def forward(self, x, target):
-        xshape=x.shape[3]
-        self.anchors = Anchors(
-            self.config.min_level, self.config.max_level,
-            self.config.num_scales, self.config.aspect_ratios,
-            self.config.anchor_scale, xshape)
-        self.anchor_labeler = AnchorLabeler(self.anchors, self.config.num_classes, match_threshold=0.5)
-
         class_out, box_out = self.model(x)
         cls_targets, box_targets, num_positives = self.anchor_labeler.batch_label_anchors(
             x.shape[0], target['bbox'], target['cls'])
-        loss, class_loss, box_loss = self.loss_fn(self.anchors.boxes,class_out, box_out, cls_targets, box_targets, num_positives)
+        loss, class_loss, box_loss = self.loss_fn(class_out, box_out, cls_targets, box_targets, num_positives)
         output = dict(loss=loss, class_loss=class_loss, box_loss=box_loss)
-        # if not self.training:
-        #     # if eval mode, output detections for evaluation
-        #     class_out, box_out, indices, classes = _post_process(self.config, class_out, box_out)
-        #     output['detections'] = _batch_detection(
-        #         x.shape[0], class_out, box_out, self.anchors.boxes, indices, classes,
-        #         target['img_scale'], target['img_size'])
+        if not self.training:
+            # if eval mode, output detections for evaluation
+            class_out, box_out, indices, classes = _post_process(self.config, class_out, box_out)
+            output['detections'] = _batch_detection(
+                x.shape[0], class_out, box_out, self.anchors.boxes, indices, classes,
+                target['img_scale'], target['img_size'])
         return output
 
 
