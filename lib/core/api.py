@@ -9,7 +9,7 @@ from train_config import config as cfg
 import cv2
 
 from lib.core.wbf import weighted_boxes_fusion
-
+from lib.core.nms import nms
 
 class Detector():
     def __init__(self,model_path):
@@ -17,12 +17,11 @@ class Detector():
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
         config = get_efficientdet_config(cfg.MODEL.model_name)
+
+        config.num_classes = 90
+        config.image_size = 768
+
         net = EfficientDet(config, pretrained_backbone=False)
-
-        config.num_classes = 1
-        config.image_size = cfg.DATA.hin
-
-        net.class_net = HeadNet(config, num_outputs=config.num_classes, norm_kwargs=dict(eps=.001, momentum=.01))
 
         state_dict = torch.load(model_path, map_location=self.device)
         net.load_state_dict(state_dict, strict=False)
@@ -36,7 +35,7 @@ class Detector():
 
 
         self.mean = torch.tensor(cfg.DATA.IMAGENET_DEFAULT_MEAN).to(self.device).view(1, 3, 1, 1)
-        self.std = torch.tensor(cfg.DATA.IMAGENET_DEFAULT_MEAN).to(self.device).view(1, 3, 1, 1)
+        self.std = torch.tensor(cfg.DATA.IMAGENET_DEFAULT_STD).to(self.device).view(1, 3, 1, 1)
 
 
     def __call__(self, image, input_size=640,iou_thres=0.5,score_thres=0.05):
@@ -62,21 +61,14 @@ class Detector():
         data = data.float().sub_(self.mean).div_(self.std)
 
 
+        scale_tensor=torch.tensor([1/scale]).to(self.device)
+        image_size_tensor=torch.tensor([[max_edge,max_edge]]).to(self.device)
         with torch.no_grad():
-            output=self.model(data,input_size)
+            output=self.model(data,scale_tensor,image_size_tensor)
 
         output=output.cpu().numpy()[0]
 
-        result=self.py_nms(output,iou_thres=iou_thres,score_thres=score_thres,max_boxes=2000)
-
-        ###scale back to raw image
-        result[:, 0:4] = result[:, 0:4] / scale
-
-        ##clip
-        result[:, 0:2][result[:, 0:2] < 0] = 0
-
-        result[:, 3][result[:, 3] > raw_w - 1] = raw_w - 1
-        result[:, 4][result[:, 4] > raw_h - 1] = raw_h - 1
+        result=output
 
         return result
 
