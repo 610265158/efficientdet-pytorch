@@ -127,7 +127,7 @@ class Train(object):
     self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,mode='min', patience=4,verbose=True,min_lr=1.e-6)
     # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR( self.optimizer, self.epochs,eta_min=1.e-6)
 
-
+    self.accumulation_steps=cfg.TRAIN.accumulation_steps
 
   def custom_loop(self):
     """Custom training and testing loop.
@@ -210,8 +210,9 @@ class Train(object):
             current_loss=loss_dict['loss']
             summary_loss.update(current_loss.detach().item(), batch_size)
 
+        current_loss=current_loss/self.accumulation_steps
 
-        self.optimizer.zero_grad()
+
 
         if cfg.TRAIN.mix_precision:
             with amp.scale_loss(current_loss, self.optimizer) as scaled_loss:
@@ -219,7 +220,10 @@ class Train(object):
         else:
             current_loss.backward()
 
-        self.optimizer.step()
+        if ((step + 1) % self.accumulation_steps) == 0:
+            self.optimizer.step()
+            self.optimizer.zero_grad()
+
 
         if cfg.TRAIN.ema:
             self.ema.update()
