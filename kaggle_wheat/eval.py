@@ -54,10 +54,9 @@ def predict_box():
     annFile = args.annFile
     cocoGt = COCO(annFile)
     catIds = cocoGt.getCatIds()
-    print(catIds)
-
+    
     imgIds = sorted(cocoGt.getImgIds())
-    print(imgIds)
+
     res_coco = []
 
     for img_id in tqdm(imgIds):
@@ -76,8 +75,6 @@ def predict_box():
 
 
         detect_res =detector(image,768,iou_thres=0.5,score_thres=0.03)
-
-
 
         ##recover to raw size
 
