@@ -18,8 +18,7 @@ class Detector():
         self.device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
         config = get_efficientdet_config(cfg.MODEL.model_name)
 
-        config.num_classes = 90
-        config.image_size = 768
+        config.num_classes = 1
 
         net = EfficientDet(config, pretrained_backbone=False)
 
