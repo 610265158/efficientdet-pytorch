@@ -56,7 +56,7 @@ def default_detection_model_configs():
 
     # localization loss (used by train bench)
     h.delta = 0.1
-    h.box_loss_weight = 50.0
+    h.box_loss_weight = 1.0
 
     return h
 
