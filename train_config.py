@@ -37,7 +37,7 @@ config.TRAIN.epoch = 100
 config.TRAIN.init_lr=5.e-4
 
 config.TRAIN.weight_decay_factor = 1.e-3                                   ####l2
-config.TRAIN.vis=True
+config.TRAIN.vis=False
 config.TRAIN.mix_precision=True
 config.TRAIN.accumulation_steps=1   ##1 means none,
 
