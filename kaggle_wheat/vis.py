@@ -12,11 +12,11 @@ from lib.core.api import Detector
 data_dir='../global-wheat-detection/test'
 
 
-model_path='./models/epoch_18_val_loss1.936444.pth'
+model_path='epoch_99_val_loss0.361207.pth'
 
 
 image_list=os.listdir(data_dir)
-
+image_list=[x for x in image_list if 'jpg' in x]
 detector=Detector(model_path)
 for pic in image_list:
     cur_path=os.path.join(data_dir,pic)
@@ -25,7 +25,7 @@ for pic in image_list:
 
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    out=detector(image,640,1024,iou_thres=0.5,score_thres=0.03)
+    out=detector(image,640,iou_thres=0.5,score_thres=0.03)
 
     for i in range(out.shape[0]):
         cur_box=out[i]

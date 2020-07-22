@@ -2,7 +2,7 @@
 __author__ = 'ZFTurbo: https://kaggle.com/zfturbo'
 
 import numpy as np
-
+from numba import jit
 
 
 def prepare_boxes(boxes, scores, labels):
@@ -17,8 +17,7 @@ def prepare_boxes(boxes, scores, labels):
     cond = (result_boxes > 1)
     cond_sum = cond.astype(np.int32).sum()
     if cond_sum > 0:
-        print(
-            'Warning. Fixed {} boxes coordinates > 1. Check that your boxes was normalized at [0, 1]'.format(cond_sum))
+        print('Warning. Fixed {} boxes coordinates > 1. Check that your boxes was normalized at [0, 1]'.format(cond_sum))
         result_boxes[cond] = 1
 
     boxes1 = result_boxes.copy()
@@ -43,11 +42,12 @@ def cpu_soft_nms_float(dets, sc, Nt, sigma, thresh, method):
     """
     Based on: https://github.com/DocF/Soft-NMS/blob/master/soft_nms.py
     It's different from original soft-NMS because we have float coordinates on range [0; 1]
+
     :param dets:   boxes format [x1, y1, x2, y2]
     :param sc:     scores for boxes
-    :param Nt:     required iou
-    :param sigma:
-    :param thresh:
+    :param Nt:     required iou 
+    :param sigma:  
+    :param thresh: 
     :param method: 1 - linear soft-NMS, 2 - gaussian soft-NMS, 3 - standard NMS
     :return: index of boxes to keep
     """
@@ -121,7 +121,7 @@ def cpu_soft_nms_float(dets, sc, Nt, sigma, thresh, method):
     return keep
 
 
-
+@jit(nopython=True)
 def nms_float_fast(dets, scores, thresh):
     """
     # It's different from original nms because we have float coordinates on range [0; 1]
@@ -158,17 +158,18 @@ def nms_float_fast(dets, scores, thresh):
 
 def nms_method(boxes, scores, labels, method=3, iou_thr=0.5, sigma=0.5, thresh=0.001, weights=None):
     """
-    :param boxes: list of boxes predictions from each model, each box is 4 numbers.
+    :param boxes: list of boxes predictions from each model, each box is 4 numbers. 
     It has 3 dimensions (models_number, model_preds, 4)
-    Order of boxes: x1, y1, x2, y2. We expect float normalized coordinates [0; 1]
-    :param scores: list of scores for each model
+    Order of boxes: x1, y1, x2, y2. We expect float normalized coordinates [0; 1] 
+    :param scores: list of scores for each model 
     :param labels: list of labels for each model
     :param method: 1 - linear soft-NMS, 2 - gaussian soft-NMS, 3 - standard NMS
-    :param iou_thr: IoU value for boxes to be a match
+    :param iou_thr: IoU value for boxes to be a match 
     :param sigma: Sigma value for SoftNMS
     :param thresh: threshold for boxes to keep (important for SoftNMS)
     :param weights: list of weights for each model. Default: None, which means weight == 1 for each model
-    :return: boxes: boxes coordinates (Order of boxes: x1, y1, x2, y2).
+
+    :return: boxes: boxes coordinates (Order of boxes: x1, y1, x2, y2). 
     :return: scores: confidence scores
     :return: labels: boxes labels
     """
@@ -187,8 +188,8 @@ def nms_method(boxes, scores, labels, method=3, iou_thr=0.5, sigma=0.5, thresh=0
     scores = np.concatenate(scores)
     labels = np.concatenate(labels)
 
-    # Fix coordinates and removed zero area boxes
-    boxes, scores, labels = prepare_boxes(boxes, scores, labels)
+    # # Fix coordinates and removed zero area boxes
+    # boxes, scores, labels = prepare_boxes(boxes, scores, labels)
 
     # Run NMS independently for each label
     unique_labels = np.unique(labels)
@@ -202,8 +203,7 @@ def nms_method(boxes, scores, labels, method=3, iou_thr=0.5, sigma=0.5, thresh=0
         labels_by_label = np.array([l] * len(boxes_by_label))
 
         if method != 3:
-            keep = cpu_soft_nms_float(boxes_by_label.copy(), scores_by_label.copy(), Nt=iou_thr, sigma=sigma,
-                                      thresh=thresh, method=method)
+            keep = cpu_soft_nms_float(boxes_by_label.copy(), scores_by_label.copy(), Nt=iou_thr, sigma=sigma, thresh=thresh, method=method)
         else:
             # Use faster function
             keep = nms_float_fast(boxes_by_label, scores_by_label, thresh=iou_thr)
@@ -218,40 +218,32 @@ def nms_method(boxes, scores, labels, method=3, iou_thr=0.5, sigma=0.5, thresh=0
     return final_boxes, final_scores, final_labels
 
 
-def nms(boxes, iou_thr=0.5, weights=None):
+def nms(boxes, scores, labels, iou_thr=0.5, weights=None):
     """
-    Short call for standard NMS
-
-    :param boxes:
-    :param scores:
-    :param labels:
-    :param iou_thr:
-    :param weights:
-    :return:
+    Short call for standard NMS 
+    
+    :param boxes: 
+    :param scores: 
+    :param labels: 
+    :param iou_thr: 
+    :param weights: 
+    :return: 
     """
-    _boxes=boxes[:,0:4]
-    _scores=boxes[:,4:5]
-    _labels=boxes[:,5:6]
-
-    _boxes,_scores,_labels=nms_method(_boxes, _scores, _labels, method=3, iou_thr=iou_thr, weights=weights)
-
-    filtered_boxes=np.concatenate([_boxes,_scores,_labels],axis=1)
-    return filtered_boxes
+    return nms_method(boxes, scores, labels, method=3, iou_thr=iou_thr, weights=weights)
 
 
 def soft_nms(boxes, scores, labels, method=2, iou_thr=0.5, sigma=0.5, thresh=0.001, weights=None):
     """
     Short call for Soft-NMS
-
-    :param boxes:
-    :param scores:
-    :param labels:
-    :param method:
-    :param iou_thr:
-    :param sigma:
-    :param thresh:
-    :param weights:
-    :return:
+     
+    :param boxes: 
+    :param scores: 
+    :param labels: 
+    :param method: 
+    :param iou_thr: 
+    :param sigma: 
+    :param thresh: 
+    :param weights: 
+    :return: 
     """
-    return nms_method(boxes, scores, labels, method=method, iou_thr=iou_thr, sigma=sigma, thresh=thresh,
-                      weights=weights)
+    return nms_method(boxes, scores, labels, method=method, iou_thr=iou_thr, sigma=sigma, thresh=thresh, weights=weights)

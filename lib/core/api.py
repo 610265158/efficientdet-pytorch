@@ -8,8 +8,6 @@ from effdet.efficientdet import HeadNet
 from train_config import config as cfg
 import cv2
 
-from lib.core.wbf import weighted_boxes_fusion
-from lib.core.nms import nms
 
 class Detector():
     def __init__(self,model_path):
