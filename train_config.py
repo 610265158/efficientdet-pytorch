@@ -37,7 +37,7 @@ config.TRAIN.epoch = 100
 config.TRAIN.init_lr=5.e-4
 
 config.TRAIN.weight_decay_factor = 1.e-3                                   ####l2
-config.TRAIN.vis=False
+config.TRAIN.vis=True
 config.TRAIN.mix_precision=True
 config.TRAIN.accumulation_steps=1   ##1 means none,
 
@@ -62,6 +62,9 @@ config.DATA.cover_obj=3
 
 
 config.DATA.mixup=0.0
+config.DATA.anchor_based_sample=0.5
+
+
 config.MODEL = edict()
 config.MODEL.model_name='tf_efficientdet_d2'
 config.MODEL.model_path = './models/'                                        ## save directory

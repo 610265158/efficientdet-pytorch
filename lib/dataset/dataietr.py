@@ -216,6 +216,29 @@ class DsfdDataIter():
 
         self.shuffle = shuffle
 
+
+        self.no_crop_transform=A.Compose(
+                                [
+                                    A.OneOf([
+                                        A.HueSaturationValue(hue_shift_limit=0.2, sat_shift_limit= 0.2,
+                                                             val_shift_limit=0.2, p=0.9),
+                                        A.RandomBrightnessContrast(brightness_limit=0.2,
+                                                                   contrast_limit=0.2, p=0.9),
+                                    ],p=0.9),
+                                    A.ToGray(p=0.01),
+                                    A.HorizontalFlip(p=0.5),
+                                    A.VerticalFlip(p=0.5),
+                                    A.Resize(height=cfg.DATA.hin, width=cfg.DATA.win, p=1),
+                                    #A.Cutout(num_holes=8, max_h_size=64, max_w_size=64, fill_value=0, p=0.5),
+
+                                ],
+                                p=1.0,
+                                bbox_params=A.BboxParams(
+                                    format='pascal_voc',
+                                    min_area=0,
+                                    min_visibility=0,
+                                    label_fields=['labels']
+                                ))
         self.transform=A.Compose(
                                 [
                                     A.RandomSizedCrop(min_max_height=(800, 800), height=1024, width=1024, p=0.5),
@@ -322,12 +345,7 @@ class DsfdDataIter():
         boxes = np.array(boxes, dtype=np.float)
 
         sample_dice = random.uniform(0, 1)
-
-
-        if sample_dice > 0.7 and sample_dice <= 1:
-            image, boxes = Random_scale_withbbox(image, boxes, target_shape=[cfg.DATA.hin, cfg.DATA.win],
-                                                 jitter=0.3)
-        elif sample_dice > 0.35 and sample_dice <= 0.7:
+        if sample_dice > 0.5:
             boxes_ = boxes[:, 0:4]
             klass_ = boxes[:, 4:]
 
@@ -343,7 +361,13 @@ class DsfdDataIter():
             image = image.astype(np.uint8)
             boxes = np.concatenate([boxes_, klass_], axis=1)
 
+        image,boxes=self.align_and_resize(image,boxes)
 
+
+
+        clip_max=image.shape[0]
+
+        boxes[:,0:4]=np.clip(boxes[:,0:4],0,clip_max)
         return image,boxes
 
     def crazy_crop(self, dp):
@@ -481,23 +505,38 @@ class DsfdDataIter():
         try:
 
             if is_training:
-                if random.uniform(0, 1) > 0.5:
-                    image, boxes = self.load_cutmix_image_and_boxes(dp)
+
+                if random.uniform(0, 1) < cfg.DATA.anchor_based_sample:
+                    image, boxes=self.random_crop_sample(dp)
+
+                    transformed=self.no_crop_transform(**{
+                        'image': image,
+                        'bboxes': boxes[:,0:4],
+                        'labels': boxes[:,4]
+                    })
+
+                    image = np.array(transformed['image'])
+                    boxes_ = np.array(transformed['bboxes'])
+                    klasses_ = np.expand_dims(np.array(transformed['labels']), 1)
+
 
                 else:
-                    image, boxes = self.load_image_and_boxes(dp)
+                    if random.uniform(0, 1) > 0.5:
+                        image, boxes = self.load_cutmix_image_and_boxes(dp)
 
-                transformed=self.transform(**{
-                    'image': image,
-                    'bboxes': boxes[:,0:4],
-                    'labels': boxes[:,4]
-                })
+                    else:
+                        image, boxes = self.load_image_and_boxes(dp)
+
+                    transformed=self.transform(**{
+                        'image': image,
+                        'bboxes': boxes[:,0:4],
+                        'labels': boxes[:,4]
+                    })
 
 
-                image=np.array(transformed['image'])
-                boxes_=np.array(transformed['bboxes'])
-                klasses_=np.expand_dims(np.array(transformed['labels']),1)
-
+                    image=np.array(transformed['image'])
+                    boxes_=np.array(transformed['bboxes'])
+                    klasses_=np.expand_dims(np.array(transformed['labels']),1)
 
 
 
