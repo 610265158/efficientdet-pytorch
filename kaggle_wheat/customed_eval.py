@@ -32,45 +32,6 @@ model_names=[argmodel_name]
 
 is_show=args.is_show
 
-def calculate_final_score(
-        all_predictions,
-        iou_thr,
-        skip_box_thr,
-        method,  # weighted_boxes_fusion, nms, soft_nms, non_maximum_weighted
-        sigma=0.5,
-):
-    final_scores = []
-    for i in range(len(all_predictions)):
-        gt_boxes = all_predictions[i]['gt_boxes'].copy()
-        image_id = all_predictions[i]['image_id']
-        folds_boxes, folds_scores, folds_labels = [], [], []
-        for fold_number in range(5):
-            pred_boxes = all_predictions[i][f'pred_boxes_fold{fold_number}'].copy()
-            scores = all_predictions[i][f'scores_fold{fold_number}'].copy()
-            folds_boxes.append(pred_boxes)
-            folds_scores.append(scores)
-            folds_labels.append(np.ones(pred_boxes.shape[0]))
-
-        if method == 'weighted_boxes_fusion':
-            boxes, scores, labels = weighted_boxes_fusion(folds_boxes, folds_scores, folds_labels, weights=None,
-                                                          iou_thr=iou_thr, skip_box_thr=skip_box_thr)
-        elif method == 'nms':
-            boxes, scores, labels = nms(folds_boxes, folds_scores, folds_labels, weights=None, iou_thr=iou_thr)
-        elif method == 'soft_nms':
-            boxes, scores, labels = soft_nms(folds_boxes, folds_scores, folds_labels, weights=None, iou_thr=iou_thr,
-                                             thresh=skip_box_thr, sigma=sigma)
-        elif method == 'non_maximum_weighted':
-            boxes, scores, labels = non_maximum_weighted(folds_boxes, folds_scores, folds_labels, weights=None,
-                                                         iou_thr=iou_thr, skip_box_thr=skip_box_thr)
-        else:
-            raise
-        image_precision = calculate_image_precision(gt_boxes, boxes, thresholds=iou_thresholds, form='pascal_voc')
-        final_scores.append(image_precision)
-
-    return np.mean(final_scores)
-
-
-
 
 class ValDataIter():
 
@@ -144,10 +105,7 @@ class ValDataIter():
 
 val_ds=ValDataIter(cfg.DATA.root_path, cfg.DATA.val_txt_path, False)
 
-
-
 def process_det(det, score_threshold=0.25):
-
 
     indexes = (det[:,4]>score_threshold)
     boxes = det[indexes,:4]
@@ -240,7 +198,7 @@ def calculate_final_score(
             boxes, scores, labels = non_maximum_weighted(folds_boxes, folds_scores, folds_labels, weights=None,
                                                          iou_thr=iou_thr, skip_box_thr=skip_box_thr)
         else:
-            raise
+            raise NotImplementedError
         image_precision = calculate_image_precision(gt_boxes, boxes, thresholds=iou_thresholds, form='pascal_voc')
         final_scores.append(image_precision)
 
@@ -249,6 +207,8 @@ def calculate_final_score(
 if __name__=='__main__':
     all_predictions=get_prediction()
 
-    score=calculate_final_score(all_predictions,0.55,0.0001,'weighted_boxes_fusion')
+
+    ### from kagglenotebook, best score with 0.430 0.430
+    score=calculate_final_score(all_predictions,0.430,0.430,'weighted_boxes_fusion')
 
     print(score)
