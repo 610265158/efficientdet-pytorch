@@ -63,7 +63,7 @@ config.DATA.cover_obj=3
 
 config.DATA.mixup=0.0
 config.DATA.anchor_based_sample=0.5
-
+config.DATA.use_cluster_anchor=False
 
 config.MODEL = edict()
 config.MODEL.model_name='tf_efficientdet_d2'
