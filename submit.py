@@ -88,9 +88,9 @@ def get_prediction():
                                     (0, 255, 0), 3)
 
                 # cv2.imwrite('./tmp/'+str(img_id)+'.jpg',image_show)
-                cv2.namedWindow('ss', 0)
-                cv2.imshow('ss', image)
-                cv2.waitKey(0)
+                plt.imshow(image)  # 显示图片
+                plt.axis('off')  # 不显示坐标轴
+                plt.show()
 
     return all_predictions
 
