@@ -111,6 +111,9 @@ def _generate_anchor_configs(min_level, max_level, num_scales, aspect_ratios):
     return anchor_configs
 
 
+
+from train_config import config as cfg
+
 def _generate_anchor_boxes(image_size, anchor_scale, anchor_configs):
     """Generates multiscale anchor boxes.
 
@@ -137,9 +140,49 @@ def _generate_anchor_boxes(image_size, anchor_scale, anchor_configs):
             stride, octave_scale, aspect = config
             if image_size % stride != 0:
                 raise ValueError("input size must be divided by the stride.")
-            base_anchor_size = anchor_scale * stride * 2 ** octave_scale
-            anchor_size_x_2 = base_anchor_size * aspect[0] / 2.0
-            anchor_size_y_2 = base_anchor_size * aspect[1] / 2.0
+
+            if cfg.DATA.use_cluster_anchor:
+                if stride==8 and aspect[0]==1.:
+                    anchor_size_x_2 = 10 / 2.0  *(2**octave_scale)
+                    anchor_size_y_2 = 13 / 2.0 *(2**octave_scale)
+                if stride == 8 and aspect[0] == 0.7:
+                    anchor_size_x_2 = 16 / 2.0 *(2**octave_scale)
+                    anchor_size_y_2 = 30 / 2.0 *(2**octave_scale)
+
+                if stride == 8 and aspect[0] ==1.4:
+                    anchor_size_x_2 = 33 / 2.0 *(2**octave_scale)
+                    anchor_size_y_2 = 23 / 2.0 *(2**octave_scale)
+
+                if stride == 16 and aspect[0] == 1.:
+                    anchor_size_x_2 = 30 / 2.0 *(2**octave_scale)
+                    anchor_size_y_2 = 61 / 2.0 *(2**octave_scale)
+                if stride == 16 and aspect[0] == 0.7:
+                    anchor_size_x_2 = 62 / 2.0 *(2**octave_scale)
+                    anchor_size_y_2 = 45 / 2.0 *(2**octave_scale)
+
+                if stride == 16 and aspect[0] == 1.4:
+                    anchor_size_x_2 = 59 / 2.0 *(2**octave_scale)
+                    anchor_size_y_2 = 119 / 2.0 *(2**octave_scale)
+
+                if stride == 32 and aspect[0] == 1.:
+                    anchor_size_x_2 = 116 / 2.0 *(2**octave_scale)
+                    anchor_size_y_2 = 90 / 2.0 *(2**octave_scale)
+                if stride == 32 and aspect[0] == 0.7:
+                    anchor_size_x_2 = 156 / 2.0 *(2**octave_scale)
+                    anchor_size_y_2 = 198 / 2.0 *(2**octave_scale)
+                if stride == 32 and aspect[0] == 1.4:
+                    anchor_size_x_2 = 373 / 2.0 *(2**octave_scale)
+                    anchor_size_y_2 = 326 / 2.0 *(2**octave_scale)
+
+                if stride==64 or stride==128:
+                    base_anchor_size = anchor_scale * stride * 2 ** octave_scale
+                    anchor_size_x_2 = base_anchor_size * aspect[0] / 2.0
+                    anchor_size_y_2 = base_anchor_size * aspect[1] / 2.0
+
+            else:
+                base_anchor_size = anchor_scale * stride * 2 ** octave_scale
+                anchor_size_x_2 = base_anchor_size * aspect[0] / 2.0
+                anchor_size_y_2 = base_anchor_size * aspect[1] / 2.0
 
             x = np.arange(stride / 2, image_size, stride)
             y = np.arange(stride / 2, image_size, stride)
