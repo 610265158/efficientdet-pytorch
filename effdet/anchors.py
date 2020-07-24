@@ -42,7 +42,7 @@ _DUMMY_DETECTION_SCORE = -1e5
 MAX_DETECTION_POINTS = 5000
 
 # The maximum number of detections per image.
-MAX_DETECTIONS_PER_IMAGE = 100
+MAX_DETECTIONS_PER_IMAGE = 300
 
 
 def decode_box_outputs(rel_codes, anchors, output_xyxy: bool=False):
@@ -210,7 +210,7 @@ def clip_boxes_xyxy(boxes: torch.Tensor, size: torch.Tensor):
 
 
 def generate_detections(
-        cls_outputs, box_outputs, anchor_boxes, indices, classes, img_scale, img_size,
+        cls_outputs, box_outputs, anchor_boxes, indices, classes, img_scale, img_size,iou_thrs,
         max_det_per_image: int = MAX_DETECTIONS_PER_IMAGE):
     """Generates detections with RetinaNet model outputs and anchors.
 
@@ -248,7 +248,7 @@ def generate_detections(
     boxes = clip_boxes_xyxy(boxes, img_size / img_scale)  # clip before NMS better?
 
     scores = cls_outputs.sigmoid().squeeze(1).float()
-    top_detection_idx = batched_nms(boxes, scores, classes, iou_threshold=0.5)
+    top_detection_idx = batched_nms(boxes, scores, classes, iou_threshold=iou_thrs)
 
     # keep only topk scoring predictions
     top_detection_idx = top_detection_idx[:max_det_per_image]
