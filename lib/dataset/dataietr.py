@@ -552,6 +552,15 @@ class DsfdDataIter():
                     ord_choice=random.choice(shuffle_ord)
                     image[:,:,:]=image[:,:,ord_choice]
 
+                if random.uniform(0, 1) < cfg.DATA.randomquality:
+
+                    quality_choice=random.randint(50,100)
+
+                    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality_choice]
+                    result, image = cv2.imencode('.jpg', image, encode_param)
+                    image = cv2.imdecode(image, 1)
+
+                    print('quality_choice',quality_choice)
                 ##### below process is litlle bit ugly, but it is ok now
                 if klasses_.shape[0]==0:
                     boxes_ = np.array([[0, 0, 0, 0]])
