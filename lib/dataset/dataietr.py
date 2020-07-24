@@ -560,7 +560,7 @@ class DsfdDataIter():
                     result, image = cv2.imencode('.jpg', image, encode_param)
                     image = cv2.imdecode(image, 1)
 
-                    print('quality_choice',quality_choice)
+
                 ##### below process is litlle bit ugly, but it is ok now
                 if klasses_.shape[0]==0:
                     boxes_ = np.array([[0, 0, 0, 0]])
