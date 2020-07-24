@@ -75,7 +75,7 @@ config.MODEL.model_path = './models/'                                        ## 
 
 config.MODEL.pretrained_model=None
 config.MODEL.freeze_bn=False
-config.MODEL=freeze_bn_affine=False
+config.MODEL.freeze_bn_affine=False
 config.SEED=42
 
 
