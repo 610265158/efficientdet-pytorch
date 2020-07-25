@@ -4,7 +4,7 @@ import torch
 
 from effdet import get_efficientdet_config, EfficientDet, DetBenchTrain,DetBenchPredict
 from effdet.efficientdet import HeadNet
-
+from torchvision.ops.boxes import batched_nms, remove_small_boxes
 from train_config import config as cfg
 import cv2
 
@@ -63,36 +63,41 @@ class Detector():
         with torch.no_grad():
             output=self.model(data,scale_tensor,image_size_tensor)
 
-        output=output.cpu().numpy()[0]
+            output=output[0]
+
+            boxes=output[:,0:4]
+            scores=output[:,4]
+            labels=output[:,5]
+
+            detections=self.nms(boxes,scores,labels)
+        output=detections.cpu().numpy()
 
         result=output
 
         return result
 
 
-    def complex_call(self,img,iou_thres=0.5,score_thres=0.05):
+    def complex_call(self,img,iou_thrs):
 
 
-        result1 =self.four_rotate_call(img,input_size=512)
-        result1 = self.py_nms(result1, iou_thres=iou_thres, score_thres=score_thres, max_boxes=1000)
-        bbox_1=(result1[:,:4]/1024).tolist()
-        score_1=result1[:,4].tolist()
-        label_1=result1[:,5].tolist()
+        result1 =self.four_rotate_call(img,input_size=1024)
 
-        bb,ss,ll=weighted_boxes_fusion([bbox_1],[score_1],[label_1])
+        result1=torch.tensor(result1).to('cpu')
+        boxes = result1[:, 0:4]
+        scores = result1[:, 4]
+        labels = result1[:, 5]
 
-        bb=bb*1024
-        ss=np.expand_dims(ss,axis=1)
-        ll = np.expand_dims(ll, axis=1)
+        detections = self.nms(boxes, scores, labels,iou_thrs)
 
-        result=np.concatenate([bb,ss,ll],axis=1)
+        output = detections.cpu().numpy()
 
-        return result
+
+        return output
 
 
 
 
-    def four_rotate_call(self,image,input_size=640):
+    def four_rotate_call(self,image,input_size):
 
         raw_h,raw_w,_=image.shape
 
@@ -105,23 +110,25 @@ class Detector():
         img=np.full(shape=[input_size,input_size,3],fill_value=cfg.DATA.IMAGENET_DEFAULT_MEAN)
 
 
-
         resized_h,resized_w,_=img_resized.shape
         img[:resized_h,:resized_w,:]=img_resized
-
-        img_rotate_90=np.rot90(img,1)
-        img_rotate_180 = np.rot90(img, 2)
-        img_rotate_270 = np.rot90(img, 3)
+        #
+        # img_rotate_90=np.rot90(img,1)
+        # img_rotate_180 = np.rot90(img, 2)
+        # img_rotate_270 = np.rot90(img, 3)
 
         img_flip=np.fliplr(img)
-        img_flip_rotate_90 = np.rot90(img_flip,1)
-        img_flip_rotate_180 = np.rot90(img_flip,2)
-        img_flip_rotate_270 = np.rot90(img_flip,3)
 
 
-        image_input=np.stack([img,img_rotate_90,img_rotate_180,img_rotate_270,\
-                              img_flip,img_flip_rotate_90,img_flip_rotate_180,img_flip_rotate_270])
-
+        # img_flip_rotate_90 = np.rot90(img_flip,1)
+        # img_flip_rotate_180 = np.rot90(img_flip,2)
+        # img_flip_rotate_270 = np.rot90(img_flip,3)
+        #
+        #
+        # image_input=np.stack([img,img_rotate_90,img_rotate_180,img_rotate_270,\
+        #                       img_flip,img_flip_rotate_90,img_flip_rotate_180,img_flip_rotate_270])
+        image_input=np.stack([img,
+                              img_flip])
         image_input=np.transpose(image_input,axes=[0,3,1,2])
 
         data = torch.from_numpy(image_input).to(self.device).float()
@@ -129,49 +136,50 @@ class Detector():
 
         data = data.float().sub_(self.mean).div_(self.std)
 
+
+
+        scale_tensor = torch.tensor([[1 / scale] for _ in range(2)]).to(self.device)
+        image_size_tensor = torch.tensor([[max_edge, max_edge] for _ in range(2)]).to(self.device)
+
+
         with torch.no_grad():
-            output=self.model(data,input_size)
+            output=self.model(data,scale_tensor,image_size_tensor)
 
         output=output.cpu().numpy()
 
-        output[1] = self.Rotate_with_box(img,angle=-90,boxes=output[1])
-
-        output[2] = self.Rotate_with_box(img, angle=-180, boxes=output[2])
-
-        output[3] = self.Rotate_with_box(img, angle=-270, boxes=output[3])
+        # output[1] = self.Rotate_with_box(image,angle=-90,boxes=output[1])
+        #
+        # output[2] = self.Rotate_with_box(image, angle=-180, boxes=output[2])
+        #
+        # output[3] = self.Rotate_with_box(image, angle=-270, boxes=output[3])
 
         # # ###flip
         #
-        output[4]=self.Flip_with_box(img,output[4])
+        output[1]=self.Flip_with_box(img,output[1],scale)
 
-        output[5] = self.Rotate_with_box(img, angle=-90, boxes=output[5])
-        output[5] = self.Flip_with_box(img, output[5])
-
-        output[6] = self.Rotate_with_box(img, angle=-180, boxes=output[6])
-        output[6] = self.Flip_with_box(img, output[6])
-
-        output[7] = self.Rotate_with_box(img, angle=-270, boxes=output[7])
-        output[7] = self.Flip_with_box(img, output[7])
+        # output[5] = self.Rotate_with_box(image, angle=-90, boxes=output[5])
+        # output[5] = self.Flip_with_box(image, output[5])
+        #
+        # output[6] = self.Rotate_with_box(image, angle=-180, boxes=output[6])
+        # output[6] = self.Flip_with_box(image, output[6])
+        #
+        # output[7] = self.Rotate_with_box(image, angle=-270, boxes=output[7])
+        # output[7] = self.Flip_with_box(image, output[7])
 
         ###cat
+
+
         result=output.reshape([-1,6])
-
-        ###scale back to raw image
-        result[:, 0:4] = result[:, 0:4] / scale
-
-        ##clip
-        result[:, 0:2][result[:, 0:2]<0]=0
-
-        result[:, 3][result[:,3] >raw_w-1] = raw_w-1
-        result[:, 4][result[:, 4] > raw_h - 1] = raw_h - 1
-
 
         return result
 
 
-    def Flip_with_box(self,src,boxes):
+    def Flip_with_box(self,src,boxes,scale):
 
         h,w,_=src.shape
+
+        h=h/scale
+        w=w/scale
         xmin = w - boxes[:, 2]
         xmax = w - boxes[:, 0]
         boxes[:, 0] = xmin
@@ -266,51 +274,19 @@ class Detector():
         boxes_raw[:,0:4]=boxes_rotated
         return  boxes_raw
 
-    def py_nms(self, bboxes, iou_thres, score_thres, max_boxes=1000):
+    def nms(self,boxes,scores,classes,iou_thrs=0.5):
 
-        upper_thres = np.where(bboxes[:, 4] > score_thres)[0]
+        ##we do in the outside
+        top_detection_idx = batched_nms(boxes, scores, classes, iou_threshold=iou_thrs)
 
-        bboxes = bboxes[upper_thres]
-        if iou_thres is None:
-            return bboxes
+        boxes=boxes[top_detection_idx,...]
+        scores=scores[top_detection_idx,...]
+        classes = classes[top_detection_idx, ...]
 
-        x1 = bboxes[:, 0]
-        y1 = bboxes[:, 1]
-        x2 = bboxes[:, 2]
-        y2 = bboxes[:, 3]
-
-        order = np.argsort(bboxes[:, 4])[::-1]
-
-        keep = []
-        while order.shape[0] > 0:
-            if len(keep) > max_boxes:
-                break
-            cur = order[0]
-
-            keep.append(cur)
-
-            area = (bboxes[cur, 2] - bboxes[cur, 0]) * (bboxes[cur, 3] - bboxes[cur, 1])
-
-            x1_reain = x1[order[1:]]
-            y1_reain = y1[order[1:]]
-            x2_reain = x2[order[1:]]
-            y2_reain = y2[order[1:]]
-
-            xx1 = np.maximum(bboxes[cur, 0], x1_reain)
-            yy1 = np.maximum(bboxes[cur, 1], y1_reain)
-            xx2 = np.minimum(bboxes[cur, 2], x2_reain)
-            yy2 = np.minimum(bboxes[cur, 3], y2_reain)
-
-            intersection = np.maximum(0, yy2 - yy1) * np.maximum(0, xx2 - xx1)
-
-            iou = intersection / (area + (y2_reain - y1_reain) * (x2_reain - x1_reain) - intersection)
-
-            ##keep the low iou
-            low_iou_position = np.where(iou < iou_thres)[0]
-
-            order = order[low_iou_position + 1]
-
-        return bboxes[keep]
+        scores = scores.unsqueeze(dim=-1)
+        classes = classes.unsqueeze(dim=-1)
+        detections = torch.cat([boxes, scores, classes.float()], dim=1)
+        return detections
 
     def load_weight(self,path):
 

@@ -248,13 +248,10 @@ def generate_detections(
     boxes = clip_boxes_xyxy(boxes, img_size / img_scale)  # clip before NMS better?
 
     scores = cls_outputs.sigmoid().squeeze(1).float()
-    top_detection_idx = batched_nms(boxes, scores, classes, iou_threshold=iou_thrs)
+
 
     # keep only topk scoring predictions
-    top_detection_idx = top_detection_idx[:max_det_per_image]
-    boxes = boxes[top_detection_idx]
-    scores = scores[top_detection_idx, None]
-    classes = classes[top_detection_idx, None]
+
 
     # xyxy to xywh & rescale to original image
     # boxes[:, 2] -= boxes[:, 0]
@@ -262,15 +259,11 @@ def generate_detections(
     boxes *= img_scale
 
     classes += 1  # back to class idx with background class = 0
-
+    scores=scores.unsqueeze(dim=-1)
+    classes=classes.unsqueeze(dim=-1)
     # stack em and pad out to MAX_DETECTIONS_PER_IMAGE if necessary
     detections = torch.cat([boxes, scores, classes.float()], dim=1)
-    if len(top_detection_idx) < max_det_per_image:
-        detections = torch.cat([
-            detections,
-            torch.zeros(
-                (max_det_per_image - len(top_detection_idx), 6), device=detections.device, dtype=detections.dtype)
-        ], dim=0)
+
     return detections
 
 
