@@ -49,12 +49,12 @@ def _post_process(config, cls_outputs, box_outputs):
 
 
 
-def _batch_detection(batch_size: int, class_out, box_out, anchor_boxes, indices, classes, img_scale, img_size,iou_thrs):
+def _batch_detection(batch_size: int, class_out, box_out, anchor_boxes, indices, classes, img_scale, img_size):
     batch_detections = []
     # FIXME we may be able to do this as a batch with some tensor reshaping/indexing, PR welcome
     for i in range(batch_size):
         detections = generate_detections(
-            class_out[i], box_out[i], anchor_boxes, indices[i], classes[i], img_scale[i], img_size[i],iou_thrs)
+            class_out[i], box_out[i], anchor_boxes, indices[i], classes[i], img_scale[i], img_size[i])
         batch_detections.append(detections)
     return torch.stack(batch_detections, dim=0)
 
@@ -69,7 +69,7 @@ class DetBenchPredict(nn.Module):
             config.num_scales, config.aspect_ratios,
             config.anchor_scale, config.image_size)
 
-    def forward(self, x, img_scales, img_size,iou_thrs=0.5):
+    def forward(self, x, img_scales, img_size):
 
         x_shape=x.shape[3]
         self.anchors = Anchors(
@@ -79,7 +79,7 @@ class DetBenchPredict(nn.Module):
         class_out, box_out = self.model(x)
         class_out, box_out, indices, classes = _post_process(self.config, class_out, box_out)
         return _batch_detection(
-            x.shape[0], class_out, box_out, self.anchors.boxes, indices, classes, img_scales, img_size,iou_thrs)
+            x.shape[0], class_out, box_out, self.anchors.boxes, indices, classes, img_scales, img_size)
 
 
 class DetBenchTrain(nn.Module):
