@@ -64,6 +64,25 @@ klasses=set(train_data['source'])
 
 train_file=open('train.txt', 'w')
 
+''''
+
+some bad bbox
+3687
+117344
+173
+113947
+52868
+2159
+2169
+121633
+121634
+147504
+118211
+52727
+147552
+'''
+
+
 
 for k,id in enumerate(train_list):
 
