@@ -95,6 +95,14 @@ class DetBenchTrain(nn.Module):
         self.loss_fn = DetectionLoss(self.config)
 
     def forward(self, x, target):
+        x_shape = x.shape[3]
+        self.anchors = Anchors(
+            self.config.min_level, self.config.max_level,
+            self.config.num_scales, self.config.aspect_ratios,
+            self.config.anchor_scale, x_shape)
+
+        self.anchor_labeler = AnchorLabeler(self.anchors, self.config.num_classes, match_threshold=0.5)
+
         class_out, box_out = self.model(x)
         cls_targets, box_targets, num_positives = self.anchor_labeler.batch_label_anchors(
             x.shape[0], target['bbox'], target['cls'])
