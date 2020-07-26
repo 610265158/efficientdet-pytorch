@@ -572,7 +572,7 @@ class DsfdDataIter():
                     bbox_height = cur_box[3] - cur_box[1]
 
                     if bbox_width/bbox_height<0.1 or bbox_width/bbox_height>10:
-                        print('filter one')
+                        
                         continue
                     else:
                         filtered_box.append(cur_box)
