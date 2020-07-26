@@ -205,6 +205,14 @@ class Train(object):
             ##xyxy to yxyx
             target['bbox'][:,:, [0, 1, 2, 3]] = target['bbox'][:,:, [1, 0, 3, 2]]
 
+
+
+
+            if cfg.DATA.mutiscale:
+                cur_shape=data.shape[3]
+
+                logger.info('training with shape %dx%d'%(cur_shape,cur_shape))
+
             loss_dict = self.model(data,target)
 
             current_loss=loss_dict['loss']
