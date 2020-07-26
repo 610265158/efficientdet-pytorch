@@ -133,6 +133,25 @@ def _generate_anchor_boxes(image_size, anchor_scale, anchor_configs):
     Raises:
         ValueError: input size must be the multiple of largest feature stride.
     """
+
+
+    yolo_anchor=[[27.0, 67.0], [32.0, 36.0], [33.0, 97.0],
+                 [39.0, 64.0], [45.0, 85.0], [47.0, 43.0],
+                 [49.0, 60.0], [52.0, 119.0], [54.0, 74.0],
+                 [55.0, 28.0], [56.0, 52.0], [59.0, 62.0],
+                 [60.0, 93.0], [62.0, 76.0], [63.0, 44.0],
+                 [67.0, 67.0], [68.0, 55.0], [71.0, 86.0],
+                 [71.0, 110.0], [72.0, 151.0], [73.0, 37.0],
+                 [73.0, 74.0], [75.0, 61.0], [79.0, 48.0],
+                 [81.0, 97.0], [81.0, 67.0], [82.0, 81.0],
+                 [88.0, 56.0], [89.0, 123.0], [90.0, 73.0],
+                 [90.0, 28.0], [93.0, 90.0], [96.0, 42.0],
+                 [100.0, 64.0], [105.0, 169.0], [105.0, 79.0],
+                 [107.0, 105.0], [112.0, 52.0], [122.0, 70.0],
+                 [131.0, 88.0], [131.0, 40.0], [133.0, 123.0],
+                 [156.0, 63.0], [175.0, 164.0], [184.0, 97.0]]
+
+    anchor_id=0
     boxes_all = []
     for _, configs in anchor_configs.items():
         boxes_level = []
@@ -142,43 +161,9 @@ def _generate_anchor_boxes(image_size, anchor_scale, anchor_configs):
                 raise ValueError("input size must be divided by the stride.")
 
             if cfg.DATA.use_cluster_anchor:
-                if stride==8 and aspect[0]==1.:
-                    anchor_size_x_2 = 10 / 2.0  *(2**octave_scale)
-                    anchor_size_y_2 = 13 / 2.0 *(2**octave_scale)
-                if stride == 8 and aspect[0] == 0.7:
-                    anchor_size_x_2 = 16 / 2.0 *(2**octave_scale)
-                    anchor_size_y_2 = 30 / 2.0 *(2**octave_scale)
-
-                if stride == 8 and aspect[0] ==1.4:
-                    anchor_size_x_2 = 33 / 2.0 *(2**octave_scale)
-                    anchor_size_y_2 = 23 / 2.0 *(2**octave_scale)
-
-                if stride == 16 and aspect[0] == 1.:
-                    anchor_size_x_2 = 30 / 2.0 *(2**octave_scale)
-                    anchor_size_y_2 = 61 / 2.0 *(2**octave_scale)
-                if stride == 16 and aspect[0] == 0.7:
-                    anchor_size_x_2 = 62 / 2.0 *(2**octave_scale)
-                    anchor_size_y_2 = 45 / 2.0 *(2**octave_scale)
-
-                if stride == 16 and aspect[0] == 1.4:
-                    anchor_size_x_2 = 59 / 2.0 *(2**octave_scale)
-                    anchor_size_y_2 = 119 / 2.0 *(2**octave_scale)
-
-                if stride == 32 and aspect[0] == 1.:
-                    anchor_size_x_2 = 116 / 2.0 *(2**octave_scale)
-                    anchor_size_y_2 = 90 / 2.0 *(2**octave_scale)
-                if stride == 32 and aspect[0] == 0.7:
-                    anchor_size_x_2 = 156 / 2.0 *(2**octave_scale)
-                    anchor_size_y_2 = 198 / 2.0 *(2**octave_scale)
-                if stride == 32 and aspect[0] == 1.4:
-                    anchor_size_x_2 = 373 / 2.0 *(2**octave_scale)
-                    anchor_size_y_2 = 326 / 2.0 *(2**octave_scale)
-
-                if stride==64 or stride==128:
-                    base_anchor_size = anchor_scale * stride * 2 ** octave_scale
-                    anchor_size_x_2 = base_anchor_size * aspect[0] / 2.0
-                    anchor_size_y_2 = base_anchor_size * aspect[1] / 2.0
-
+                anchor_size_x_2 = yolo_anchor[anchor_id][0] / 2.0
+                anchor_size_y_2 = yolo_anchor[anchor_id][1] / 2.0
+                anchor_id+=1
             else:
                 base_anchor_size = anchor_scale * stride * 2 ** octave_scale
                 anchor_size_x_2 = base_anchor_size * aspect[0] / 2.0
