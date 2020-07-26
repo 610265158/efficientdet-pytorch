@@ -81,7 +81,12 @@ some bad bbox
 52727
 147552
 '''
+bad_box_index=[3687,117344,173,113947,52868,2159,2169,121633,121634,147504,118211,52727,147552]
 
+
+###drop the bad box
+for drop_id in bad_box_index:
+    train_data=train_data.drop(index=drop_id)
 
 
 for k,id in enumerate(train_list):
