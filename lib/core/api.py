@@ -77,15 +77,52 @@ class Detector():
         return result
 
 
+
+
+    def simple_call(self, image, input_size=640):
+        raw_h, raw_w, _ = image.shape
+
+        max_edge = max(raw_h, raw_w)
+
+        scale = input_size / max_edge
+
+        img_resized = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
+
+        img = np.full(shape=[input_size, input_size, 3], fill_value=cfg.DATA.IMAGENET_DEFAULT_MEAN)
+
+        resized_h, resized_w, _ = img_resized.shape
+        img[:resized_h, :resized_w, :] = img_resized
+
+        img = np.transpose(img, axes=[2, 0, 1])
+        img = np.expand_dims(img, 0)
+        data = torch.from_numpy(img).to(self.device).float()
+
+        data = data.float().sub_(self.mean).div_(self.std)
+
+        scale_tensor = torch.tensor([1 / scale]).to(self.device)
+        image_size_tensor = torch.tensor([[max_edge, max_edge]]).to(self.device)
+        with torch.no_grad():
+            output = self.model(data, scale_tensor, image_size_tensor)
+
+
+        return output
+
+
     def complex_call(self,img,iou_thrs):
 
 
         result1 =self.four_rotate_call(img,input_size=1024)
+        result2 = self.four_rotate_call(img, input_size=896)
+        result3 = self.four_rotate_call(img, input_size=768)
 
-        result1=torch.tensor(result1).to('cpu')
-        boxes = result1[:, 0:4]
-        scores = result1[:, 4]
-        labels = result1[:, 5]
+
+        result=torch.cat([result1,result2,result3],dim=0)
+        result = result.reshape([-1, 6])
+
+
+        boxes = result[:, 0:4]
+        scores = result[:, 4]
+        labels = result[:, 5]
 
         detections = self.nms(boxes, scores, labels,iou_thrs)
 
@@ -99,91 +136,54 @@ class Detector():
 
     def four_rotate_call(self,image,input_size):
 
-        raw_h,raw_w,_=image.shape
+        h,w,c=image.shape
+        res1=self.simple_call(image,input_size=input_size)
 
-        max_edge=max(raw_h,raw_w)
+        fliplr_image=np.fliplr(image)
 
-        scale=input_size/max_edge
+        res2 = self.simple_call(fliplr_image, input_size=input_size)
 
-        img_resized = cv2.resize(image,None, fx=scale,fy=scale,interpolation=cv2.INTER_LINEAR)
+        xmin = w - res2[:, :, 2]
+        xmax = w - res2[:, :, 0]
+        res2[:, :, 0]=xmin
+        res2[:, :, 2]=xmax
 
-        img=np.full(shape=[input_size,input_size,3],fill_value=cfg.DATA.IMAGENET_DEFAULT_MEAN)
+        flipup_image = np.flipud(image)
 
-
-        resized_h,resized_w,_=img_resized.shape
-        img[:resized_h,:resized_w,:]=img_resized
-        #
-        # img_rotate_90=np.rot90(img,1)
-        # img_rotate_180 = np.rot90(img, 2)
-        # img_rotate_270 = np.rot90(img, 3)
-
-        img_flip=np.fliplr(img)
-
-
-        # img_flip_rotate_90 = np.rot90(img_flip,1)
-        # img_flip_rotate_180 = np.rot90(img_flip,2)
-        # img_flip_rotate_270 = np.rot90(img_flip,3)
-        #
-        #
-        # image_input=np.stack([img,img_rotate_90,img_rotate_180,img_rotate_270,\
-        #                       img_flip,img_flip_rotate_90,img_flip_rotate_180,img_flip_rotate_270])
-        image_input=np.stack([img,
-                              img_flip])
-        image_input=np.transpose(image_input,axes=[0,3,1,2])
-
-        data = torch.from_numpy(image_input).to(self.device).float()
+        res3 = self.simple_call(flipup_image, input_size=input_size)
+        ymin = h - res3[:, :, 3]
+        ymax = h - res3[:, :, 1]
+        res3[:, :, 1]=ymin
+        res3[:, :, 3]=ymax
+        result=torch.cat([res1,res2,res3],0)
 
 
-        data = data.float().sub_(self.mean).div_(self.std)
-
-
-
-        scale_tensor = torch.tensor([[1 / scale] for _ in range(2)]).to(self.device)
-        image_size_tensor = torch.tensor([[max_edge, max_edge] for _ in range(2)]).to(self.device)
-
-
-        with torch.no_grad():
-            output=self.model(data,scale_tensor,image_size_tensor)
-
-        output=output.cpu().numpy()
-
-        # output[1] = self.Rotate_with_box(image,angle=-90,boxes=output[1])
-        #
-        # output[2] = self.Rotate_with_box(image, angle=-180, boxes=output[2])
-        #
-        # output[3] = self.Rotate_with_box(image, angle=-270, boxes=output[3])
-
-        # # ###flip
-        #
-        output[1]=self.Flip_with_box(img,output[1],scale)
-
-        # output[5] = self.Rotate_with_box(image, angle=-90, boxes=output[5])
-        # output[5] = self.Flip_with_box(image, output[5])
-        #
-        # output[6] = self.Rotate_with_box(image, angle=-180, boxes=output[6])
-        # output[6] = self.Flip_with_box(image, output[6])
-        #
-        # output[7] = self.Rotate_with_box(image, angle=-270, boxes=output[7])
-        # output[7] = self.Flip_with_box(image, output[7])
-
-        ###cat
-
-
-        result=output.reshape([-1,6])
 
         return result
 
 
-    def Flip_with_box(self,src,boxes,scale):
+    def Flip_with_box(self,src,boxes,scale,up_down=False):
+
+
 
         h,w,_=src.shape
 
+
         h=h/scale
         w=w/scale
-        xmin = w - boxes[:, 2]
-        xmax = w - boxes[:, 0]
-        boxes[:, 0] = xmin
-        boxes[:, 2] = xmax
+
+        if up_down:
+            ymin = h - boxes[:, 3]
+            ymax = h - boxes[:, 1]
+            boxes[:, 1] = ymin
+            boxes[:, 3] = ymax
+
+        else:
+
+            xmin = w - boxes[:, 2]
+            xmax = w - boxes[:, 0]
+            boxes[:, 0] = xmin
+            boxes[:, 2] = xmax
         return  boxes
 
     def Rotate_with_box(self,src, angle, boxes=None, center=None, scale=1.0):

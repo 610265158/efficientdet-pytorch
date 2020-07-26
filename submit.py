@@ -23,9 +23,9 @@ image_list=[x for x in image_list if 'jpg' in x]
 
 results=[]
 iou_thres=0.430
-score_thres=0.430
+score_thres=0.3
 is_show=True
-
+TTA=True
 def format_prediction_string(boxes):
     pred_strings = []
     for j in range(boxes.shape[0]):
@@ -51,12 +51,16 @@ def get_prediction():
 
             cur_path = os.path.join(data_dir, pic)
 
-            print(cur_path)
+
             image = cv2.imread(cur_path)
 
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-            cur_result = detector(image)
+
+            if TTA:
+                cur_result=detector.complex_call(image,0.5)
+            else:
+                cur_result = detector(image)
 
             image_id=pic.split('.')[0]
 
@@ -141,7 +145,7 @@ def ensemble(all_predictions,
 
 all_predictions=get_prediction()
 
-results=ensemble(all_predictions,iou_thr=0.430,skip_box_thr=0.430,method='weighted_boxes_fusion')
+results=ensemble(all_predictions,iou_thr=0.430,skip_box_thr=0.3,method='weighted_boxes_fusion')
 
 test_df = pd.DataFrame(results, columns=['image_id', 'PredictionString'])
 test_df.to_csv('../submission.csv', index=False)
