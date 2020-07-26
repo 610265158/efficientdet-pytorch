@@ -538,9 +538,9 @@ class DsfdDataIter():
                 if random.uniform(0, 1) <cfg.DATA.rotate:
                     angle_choice=random.choice([0,90,180,270])
                     image,boxes_=Rotate_with_box(image,angle_choice,boxes_)
-
-                    # angle_choice = random.uniform(0,3)
-                    # image, boxes_ = Rotate_with_box(image, angle_choice, boxes_)
+                    if cfg.DATA.rotate_jitter>0:
+                        angle_choice = random.uniform(0,cfg.DATA.rotate_jitter)
+                        image, boxes_ = Rotate_with_box(image, angle_choice, boxes_)
                 if random.uniform(0, 1)<   cfg.DATA.blur:
 
                     kisze=random.choice([3,5])
@@ -560,6 +560,26 @@ class DsfdDataIter():
                     result, image = cv2.imencode('.jpg', image, encode_param)
                     image = cv2.imdecode(image, 1)
 
+
+
+                ###clean the box
+                filtered_box=[]
+                filtered_klass=[]
+                for bb in range(boxes_.shape[0]):
+                    cur_box=boxes_[bb,...]
+                    cur_kalss=klasses_[bb]
+                    bbox_width=cur_box[2]-cur_box[0]
+                    bbox_height = cur_box[3] - cur_box[1]
+
+                    if bbox_width/bbox_height<0.1 or bbox_width/bbox_height>10:
+                        print('filter one')
+                        continue
+                    else:
+                        filtered_box.append(cur_box)
+                        filtered_klass.append(cur_kalss)
+
+                boxes_ = np.array(filtered_box)
+                klasses_ = np.array(filtered_klass)
 
                 ##### below process is litlle bit ugly, but it is ok now
                 if klasses_.shape[0]==0:
