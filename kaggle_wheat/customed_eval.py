@@ -4,8 +4,7 @@ sys.path.append('.')
 
 import cv2
 import numpy as np
-import torch
-from torch.utils.data import Dataset
+from tqdm import tqdm
 
 from lib.core.utils import calculate_image_precision, iou_thresholds
 from lib.dataset.augmentor.augmentation import Fill_img
@@ -211,4 +210,21 @@ if __name__=='__main__':
     ### from kagglenotebook, best score with 0.430 0.430
     score=calculate_final_score(all_predictions,0.430,0.430,'weighted_boxes_fusion')
 
-    print(score)
+    best_score=0.
+    best_thrs=0.
+
+    scores=[x /100 for x in range(30,70)]
+
+    for thrs in tqdm(scores):
+        score=calculate_final_score(all_predictions,0.430,thrs,'weighted_boxes_fusion')
+
+        if score>best_score:
+            best_score=score
+            best_thrs=thrs
+
+    print('-'*30)
+
+    print('best score thrs: ',thrs)
+    print('best score: ',best_score)
+
+    print('-' * 30)
