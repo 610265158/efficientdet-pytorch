@@ -514,7 +514,10 @@ class DsfdDataIter():
             return IoU
 
         dp2=random.choice(self.lst)
-        image_2,boxes_2=self.random_crop_sample(dp2)
+        if random.uniform(0,1)>0.5:
+            image_2,boxes_2=self.load_cutmix_image_and_boxes(dp2)
+        else:
+            image_2, boxes_2 = self.load_image_and_boxes(dp2)
 
 
         boxes_mix=[]
