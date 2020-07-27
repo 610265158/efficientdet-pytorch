@@ -489,7 +489,80 @@ class DsfdDataIter():
         result_boxes = result_boxes[
             np.where((result_boxes[:, 2] - result_boxes[:, 0]) * (result_boxes[:, 3] - result_boxes[:, 1]) > 0)]
         return result_image.astype(np.uint8), result_boxes
+    def crazy_mix(self,image,boxes,labels):
 
+        def fakeIoU(bbox, gt):
+            """
+            :param bbox: (n, 4)
+            :param gt: (m, 4)
+            :return: (n, m)
+            numpy 广播机制 从后向前对齐。 维度为1 的可以重复等价为任意维度
+            eg: (4,3,2)   (3,2)  (3,2)会扩充为(4,3,2)
+                (4,1,2)   (3,2) (4,1,2) 扩充为(4, 3, 2)  (3, 2)扩充为(4, 3,2) 扩充的方法为重复
+            广播会在numpy的函数 如sum, maximun等函数中进行
+            pytorch同理。
+            扩充维度的方法：
+            eg: a  a.shape: (3,2)  a[:, None, :] a.shape: (3, 1, 2) None 对应的维度相当于newaxis
+            """
+            lt = np.maximum(bbox[:, None, :2], gt[:, :2])  # left_top (x, y)
+            rb = np.minimum(bbox[:, None, 2:], gt[:, 2:])  # right_bottom (x, y)
+            wh = np.maximum(rb - lt + 1, 0)  # inter_area (w, h)
+            inter_areas = wh[:, :, 0] * wh[:, :, 1]  # shape: (n, m)
+            box_areas = (bbox[:, 2] - bbox[:, 0] + 1) * (bbox[:, 3] - bbox[:, 1] + 1)
+
+            IoU = inter_areas / (box_areas[:, None])
+            return IoU
+
+        dp2=random.choice(self.lst)
+        image_2,boxes_2=self.random_crop_sample(dp2)
+
+
+        boxes_mix=[]
+        ###maskout boxes in image1
+        # for k in range(boxes.shape[0]):
+        #     cur_box=boxes[k].astype(np.int)
+        #     image[cur_box[1]:cur_box[3],cur_box[0]:cur_box[2],:]=np.array(cfg.DATA.IMAGENET_DEFAULT_MEAN)
+
+        for k in range(boxes_2.shape[0]):
+
+            cur_box=boxes_2[k].astype(np.int)
+            cur_patch=image_2[cur_box[1]:cur_box[3],cur_box[0]:cur_box[2],:]
+
+            cur_width=cur_box[2]-cur_box[0]
+            cur_height=cur_box[3]-cur_box[1]
+
+
+            image_h,image_w,c=image.shape
+            start_x=random.randint(0,image_w-cur_width)
+            start_y = random.randint(0, image_h - cur_height)
+
+            image[start_y:(start_y+cur_height),start_x:(start_x+cur_width),:]=cur_patch
+
+            box_produced=np.array([start_x,start_y,start_x+cur_width,start_y+cur_height,1])
+
+
+            boxes_mix.append(box_produced)
+
+
+        boxes_mix=np.array(boxes_mix)
+
+        ###计算重叠面积， 如果第一个图的重叠面积和自己的面积比超过0.7 可能就需要过滤了
+        fake_iou=fakeIoU(boxes[:,0:4],boxes_mix[:,0:4])
+
+        bool_choosen=np.max(fake_iou,axis=1)<0.7
+
+        box_remain=boxes[bool_choosen]
+
+        klasses_remain=labels[bool_choosen]
+        ####
+        boxes_1=np.concatenate([box_remain,klasses_remain],axis=1)
+
+
+
+        boxes_produce=np.concatenate([boxes_1,boxes_mix])
+        #
+
+        return image,boxes_produce[:,:4],boxes_produce[:,4:5]
     def _map_func(self,dp,is_training):
         """Data augmentation function."""
         ####customed here
@@ -533,6 +606,8 @@ class DsfdDataIter():
                     boxes_=np.array(transformed['bboxes'])
                     klasses_=np.expand_dims(np.array(transformed['labels']),1)
 
+                if random.uniform(0, 1) < cfg.DATA.crazy_mix:
+                    image, boxes_,klasses_=self.crazy_mix(image,boxes_,klasses_)
 
 
                 if random.uniform(0, 1) <cfg.DATA.rotate:

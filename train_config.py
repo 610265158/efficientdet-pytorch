@@ -68,6 +68,7 @@ config.DATA.rotate_jitter=2
 config.DATA.blur=0.0
 config.DATA.rgbshuffle=0.0
 config.DATA.randomquality=0.0
+config.DATA.crazy_mix=0.0
 config.DATA.use_cluster_anchor=False
 
 config.MODEL = edict()
