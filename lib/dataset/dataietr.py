@@ -546,20 +546,30 @@ class DsfdDataIter():
 
         boxes_mix=np.array(boxes_mix)
 
+
+
+
         ###计算重叠面积， 如果第一个图的重叠面积和自己的面积比超过0.7 可能就需要过滤了
-        fake_iou=fakeIoU(boxes[:,0:4],boxes_mix[:,0:4])
 
-        bool_choosen=np.max(fake_iou,axis=1)<0.7
+        if boxes.shape[0]==0:
+            boxes_produce=boxes_mix
+        else:
+            try:
+                fake_iou=fakeIoU(boxes[:,0:4],boxes_mix[:,0:4])
+            except:
+                print(boxes.shape)
+                print(boxes_mix.shape)
+            bool_choosen=np.max(fake_iou,axis=1)<0.7
 
-        box_remain=boxes[bool_choosen]
+            box_remain=boxes[bool_choosen]
 
-        klasses_remain=labels[bool_choosen]
-        ####
-        boxes_1=np.concatenate([box_remain,klasses_remain],axis=1)
+            klasses_remain=labels[bool_choosen]
+            ####
+            boxes_1=np.concatenate([box_remain,klasses_remain],axis=1)
 
 
 
-        boxes_produce=np.concatenate([boxes_1,boxes_mix])
+            boxes_produce=np.concatenate([boxes_1,boxes_mix])
         #
 
         return image,boxes_produce[:,:4],boxes_produce[:,4:5]
@@ -635,7 +645,9 @@ class DsfdDataIter():
                     result, image = cv2.imencode('.jpg', image, encode_param)
                     image = cv2.imdecode(image, 1)
 
+                h_limit,w_limit,_=image.shape
 
+                boxes_=np.clip(boxes_,0,cfg.DATA.hin)
 
                 ###clean the box
                 filtered_box=[]
@@ -646,7 +658,10 @@ class DsfdDataIter():
                     bbox_width=cur_box[2]-cur_box[0]
                     bbox_height = cur_box[3] - cur_box[1]
 
-                    if bbox_width/bbox_height<0.1 or bbox_width/bbox_height>10:
+
+                    if bbox_width*bbox_height<5*5:
+                        continue
+                    elif bbox_width/bbox_height<0.1 or bbox_width/bbox_height>10 :
                         
                         continue
                     else:
