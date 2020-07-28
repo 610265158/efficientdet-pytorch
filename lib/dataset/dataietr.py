@@ -239,14 +239,14 @@ class DsfdDataIter():
         self.no_crop_transform=A.Compose(
                                 [
                                     A.OneOf([
-                                        A.HueSaturationValue(hue_shift_limit=5,
-                                                             sat_shift_limit=5,
-                                                             val_shift_limit=5,
+                                        A.HueSaturationValue(hue_shift_limit=0.2,
+                                                             sat_shift_limit=0.2,
+                                                             val_shift_limit=0.2,
                                                              p=0.9),
-                                        A.RandomBrightnessContrast(brightness_limit=0.3,
-                                                                   contrast_limit=0.3, p=0.9),
+                                        A.RandomBrightnessContrast(brightness_limit=0.2,
+                                                                   contrast_limit=0.2, p=0.9),
                                     ],p=0.9),
-                                    A.RGBShift(p=0.9)
+                                    #A.RGBShift(p=0.9)
                                     # A.ToGray(p=0.01),
                                     #A.Cutout(num_holes=8, max_h_size=64, max_w_size=64, fill_value=0, p=0.5),
                                 ],
@@ -260,14 +260,14 @@ class DsfdDataIter():
                                     A.VerticalFlip(p=0.5),
                                     A.Resize(height=cfg.DATA.hin, width=cfg.DATA.win, p=1),
                                     A.OneOf([
-                                        A.HueSaturationValue(hue_shift_limit=5,
-                                                             sat_shift_limit=5,
-                                                             val_shift_limit=5,
+                                        A.HueSaturationValue(hue_shift_limit=0.2,
+                                                             sat_shift_limit=0.2,
+                                                             val_shift_limit=0.2,
                                                              p=0.9),
                                         A.RandomBrightnessContrast(brightness_limit=0.2,
                                                                    contrast_limit=0.2, p=0.9),
                                     ], p=0.9),
-                                    A.RGBShift(p=0.9)
+                                    #A.RGBShift(p=0.9)
                                     #A.Cutout(num_holes=8, max_h_size=64, max_w_size=64, fill_value=0, p=0.5),
 
                                 ],
@@ -648,6 +648,9 @@ class DsfdDataIter():
                     if cfg.DATA.rotate_jitter>0:
                         angle_choice = random.uniform(0,cfg.DATA.rotate_jitter)
                         image, boxes_ = Rotate_with_box(image, angle_choice, boxes_)
+                if random.uniform(0, 1) < cfg.DATA.blur:
+                    ksize=random.choice([(3,3),(5,5)])
+                    image=cv2.blur(image,ksize=ksize)
 
                 if random.uniform(0, 1) < cfg.DATA.rgbshuffle:
 
