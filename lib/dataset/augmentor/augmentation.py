@@ -437,7 +437,7 @@ class RandomBaiduCrop(object):
         rand_idx = random.randint(0,len(boxArea)-1)
         rand_Side = boxArea[rand_idx] ** 0.5
         # rand_Side = min(boxes[rand_idx,2] - boxes[rand_idx,0] + 1, boxes[rand_idx,3] - boxes[rand_idx,1] + 1)
-        anchors = [16, 32, 64, 128, 256, 512]
+        anchors = [ 32, 64, 128, 256, 416]
         distance = self.infDistance
         anchor_idx = 5
         for i, anchor in enumerate(anchors):
@@ -576,8 +576,7 @@ class RandomSampleCrop(object):
             # using entire original input image
             None,
             # sample a patch s.t. MIN jaccard w/ obj in .1,.3,.4,.7,.9
-            (0.1, None),
-            (0.3, None),
+            (0.5, None),
             (0.7, None),
             (0.9, None),
             # randomly sample a patch

@@ -353,21 +353,15 @@ class DsfdDataIter():
         boxes = np.array(boxes, dtype=np.float)
 
         sample_dice = random.uniform(0, 1)
-        if sample_dice > 0.5:
-            boxes_ = boxes[:, 0:4]
-            klass_ = boxes[:, 4:]
 
-            image, boxes_, klass_ = dsfd_aug(image, boxes_, klass_)
+        boxes_ = boxes[:, 0:4]
+        klass_ = boxes[:, 4:]
 
-            image = image.astype(np.uint8)
-            boxes = np.concatenate([boxes_, klass_], axis=1)
-        else:
-            boxes_ = boxes[:, 0:4]
-            klass_ = boxes[:, 4:]
-            image, boxes_, klass_ = baidu_aug(image, boxes_, klass_)
+        image, boxes_, klass_ = dsfd_aug(image, boxes_, klass_)
 
-            image = image.astype(np.uint8)
-            boxes = np.concatenate([boxes_, klass_], axis=1)
+        image = image.astype(np.uint8)
+        boxes = np.concatenate([boxes_, klass_], axis=1)
+
 
         image,boxes=self.align_and_resize(image,boxes)
 
