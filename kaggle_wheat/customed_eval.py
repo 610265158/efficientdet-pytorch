@@ -213,6 +213,7 @@ if __name__=='__main__':
     best_score=0.
     best_thrs=0.
 
+
     scores=[x /100 for x in range(30,70)]
 
     for thrs in tqdm(scores):
@@ -224,7 +225,7 @@ if __name__=='__main__':
 
     print('-'*30)
 
-    print('best score thrs: ',thrs)
+    print('best score thrs: ',best_thrs)
     print('best score: ',best_score)
 
     print('-' * 30)
