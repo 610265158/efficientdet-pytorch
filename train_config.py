@@ -62,12 +62,12 @@ config.DATA.cover_obj=3
 
 
 config.DATA.mixup=0.0
-config.DATA.anchor_based_sample=0.0
-config.DATA.rotate=0.0
-config.DATA.rotate_jitter=2
+config.DATA.anchor_based_sample=0.5
+config.DATA.rotate=0.5
+config.DATA.rotate_jitter=0
 config.DATA.blur=0.0
 config.DATA.rgbshuffle=0.0
-config.DATA.randomquality=0.0
+config.DATA.randomquality=0.5
 config.DATA.crazy_mix=0.0
 config.DATA.use_cluster_anchor=False
 
