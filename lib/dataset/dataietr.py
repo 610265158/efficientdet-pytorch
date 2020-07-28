@@ -31,13 +31,19 @@ import math
 
 import albumentations as A
 class data_info():
-    def __init__(self,img_root,txt):
+    def __init__(self,img_root,txt,training_flag=False):
+
+        self.training_flag = training_flag
+
+
         self.txt_file=txt
         self.root_path = img_root
         self.metas=[]
 
 
         self.read_txt()
+
+
 
     def read_txt(self):
         with open(self.txt_file) as _f:
@@ -46,11 +52,22 @@ class data_info():
         for line in txt_lines:
             line=line.rstrip()
 
-            _img_path=line.rsplit('| ',1)[0]
-            _label=line.rsplit('| ',1)[-1]
+
+            split_info=line.split('| ')
+
+            
+            source=split_info[0]
+            _img_path=split_info[1]
+            _label=split_info[2]
 
             current_img_path=os.path.join(self.root_path,_img_path)
             current_img_label=_label
+
+            if self.training_flag:
+                if str(source)=='usask_1' or str(source)=='inrae_1' or str(source)=='arvalis_2':
+                    for _ in range(3):
+                        current_img_path = os.path.join(self.root_path, _img_path)
+
             self.metas.append([current_img_path,current_img_label])
 
             ###some change can be made here
@@ -288,7 +305,7 @@ class DsfdDataIter():
         '''
         logger.info("[x] Get dataset from {}".format(im_root_path))
 
-        ann_info = data_info(im_root_path, ann_file)
+        ann_info = data_info(im_root_path, ann_file,self.training_flag)
         all_samples = ann_info.get_all_sample()
 
         return all_samples
@@ -753,7 +770,7 @@ class DataIter():
                                   is_training=self.training_flag)
         if not self.training_flag:
             self.process_num=1
-        ds = MultiProcessPrefetchData(ds, self.prefetch_size, self.process_num)
+        # ds = MultiProcessPrefetchData(ds, self.prefetch_size, self.process_num)
         ds.reset_state()
         ds = ds.get_data()
         return ds

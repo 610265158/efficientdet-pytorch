@@ -68,6 +68,14 @@ print('the image has no label',emplty_image_list)
 
 klasses=set(train_data['source'])
 
+print('data distribution is')
+for klass in klasses:
+    cur_num=(marking['source']==klass)
+
+
+    print(klass, np.sum(cur_num))
+
+
 train_file=open('train.txt', 'w')
 
 
@@ -101,9 +109,13 @@ for k,id in enumerate(train_list):
 
     bboxes=train_data[train_data['image_id']==id]
 
-    cur_label_message=data_dir+'/'+str(id)+'.jpg|'
+    cur_source = bboxes['source'].to_list()[0]
+
+    cur_label_message=cur_source+'| '+data_dir+'/'+str(id)+'.jpg|'
+
 
     for box in bboxes['bbox']:
+
         curbox=box[1:-1].split(',')
         cur_box_info=[float(x) for x in curbox]
 
@@ -121,14 +133,14 @@ for k,id in enumerate(train_list):
 for k,id in enumerate(emplty_image_list):
 
 
-    cur_label_message=data_dir+'/'+str(id)+'.jpg| 0,0,0,0,0'
+    cur_label_message='nan| '+data_dir+'/'+str(id)+'.jpg| 0,0,0,0,0'
 
     cur_label_message+='\n'
     train_file.write(cur_label_message)
 
 if extern_data:
     for k, img_name in enumerate(extern_image_list):
-        cur_label_message = extern_dir + '/' + str(img_name) + '| 0,0,0,0,0'
+        cur_label_message ='nan| ' +extern_dir + '/' + str(img_name) + '| 0,0,0,0,0'
 
         cur_label_message += '\n'
         train_file.write(cur_label_message)
@@ -139,8 +151,9 @@ val_file=open('val.txt', 'w')
 for k,id in enumerate(val_list):
 
     bboxes=train_data[train_data['image_id']==id]
+    cur_source = bboxes['source'].to_list()[0]
 
-    cur_label_message=data_dir+'/'+str(id)+'.jpg|'
+    cur_label_message=cur_source+'| '+data_dir+'/'+str(id)+'.jpg|'
 
     for box in bboxes['bbox']:
         curbox=box[1:-1].split(',')
