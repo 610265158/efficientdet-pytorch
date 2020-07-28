@@ -70,7 +70,8 @@ class data_info():
                 else:
 
                     self.metas.append([current_img_path,current_img_label])
-
+            else:
+                self.metas.append([current_img_path, current_img_label])
             ###some change can be made here
         logger.info('the dataset contains %d images'%(len(txt_lines)))
         logger.info('the datasets contains %d samples'%(len(self.metas)))
