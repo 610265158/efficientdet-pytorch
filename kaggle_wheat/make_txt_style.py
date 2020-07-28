@@ -7,9 +7,15 @@ from sklearn.model_selection import StratifiedKFold
 
 data_dir='../global-wheat-detection/train'
 train_csv='../global-wheat-detection/train.csv'
+
+
 fold_used=0
 
 
+extern_data=True
+if extern_data:
+    extern_dir='../global-wheat-detection/adv_data_all'
+    extern_image_list=os.listdir(extern_dir)
 marking = pd.read_csv(train_csv)
 
 bboxs = np.stack(marking['bbox'].apply(lambda x: np.fromstring(x[1:-1], sep=',')))
@@ -63,6 +69,8 @@ print('the image has no label',emplty_image_list)
 klasses=set(train_data['source'])
 
 train_file=open('train.txt', 'w')
+
+
 
 ''''
 
@@ -118,7 +126,13 @@ for k,id in enumerate(emplty_image_list):
     cur_label_message+='\n'
     train_file.write(cur_label_message)
 
+if extern_data:
+    for k, img_name in enumerate(extern_image_list):
+        cur_label_message = extern_dir + '/' + str(img_name) + '| 0,0,0,0,0'
 
+        cur_label_message += '\n'
+        train_file.write(cur_label_message)
+        
 val_file=open('val.txt', 'w')
 
 
