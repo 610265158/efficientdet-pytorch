@@ -220,29 +220,46 @@ class DsfdDataIter():
         self.no_crop_transform=A.Compose(
                                 [
                                     A.OneOf([
-                                        A.HueSaturationValue(hue_shift_limit=0.2, sat_shift_limit=0.2,
-                                                             val_shift_limit=0.2, p=1.),
-                                        A.RandomBrightnessContrast(brightness_limit=0.2,
-                                                                   contrast_limit=0.2, p=1.),
+                                        A.HueSaturationValue( p=0.9),
+                                        A.RandomBrightnessContrast(brightness_limit=0.3,
+                                                                   contrast_limit=0.3, p=0.9),
                                     ],p=0.9),
                                     # A.ToGray(p=0.01),
                                     #A.Cutout(num_holes=8, max_h_size=64, max_w_size=64, fill_value=0, p=0.5),
-
+                                    A.OneOf([
+                                        A.IAAAdditiveGaussianNoise(),
+                                        A.GaussNoise(),
+                                    ], p=0.3),
+                                    A.OneOf([
+                                        A.MotionBlur(p=0.2),
+                                        A.MedianBlur(blur_limit=5, p=0.2),
+                                        A.Blur(blur_limit=5, p=0.2),
+                                    ], p=0.5),
                                 ],
                                 p=1.0)
         self.transform=A.Compose(
                                 [
                                     A.RandomSizedCrop(min_max_height=(800, 800), height=1024, width=1024, p=0.5),
-                                    A.OneOf([
-                                        A.HueSaturationValue(hue_shift_limit=0.2, sat_shift_limit= 0.2,
-                                                             val_shift_limit=0.2, p=1.),
-                                        A.RandomBrightnessContrast(brightness_limit=0.2,
-                                                                   contrast_limit=0.2, p=1.),
-                                    ],p=0.9),
+
                                     # A.ToGray(p=0.01),
                                     A.HorizontalFlip(p=0.5),
                                     A.VerticalFlip(p=0.5),
                                     A.Resize(height=cfg.DATA.hin, width=cfg.DATA.win, p=1),
+                                    A.OneOf([
+                                        A.HueSaturationValue(p=0.9),
+                                        A.RandomBrightnessContrast(brightness_limit=0.2,
+                                                                   contrast_limit=0.2, p=0.9),
+                                    ], p=0.9),
+                                    A.OneOf([
+                                        A.IAAAdditiveGaussianNoise(),
+                                        A.GaussNoise(),
+                                    ], p=0.3),
+                                    A.OneOf([
+                                        A.MotionBlur(p=0.2),
+                                        A.MedianBlur(blur_limit=5, p=0.2),
+                                        A.Blur(blur_limit=5, p=0.2),
+                                    ], p=0.5),
+
                                     #A.Cutout(num_holes=8, max_h_size=64, max_w_size=64, fill_value=0, p=0.5),
 
                                 ],
@@ -629,10 +646,6 @@ class DsfdDataIter():
                     if cfg.DATA.rotate_jitter>0:
                         angle_choice = random.uniform(0,cfg.DATA.rotate_jitter)
                         image, boxes_ = Rotate_with_box(image, angle_choice, boxes_)
-                if random.uniform(0, 1)<   cfg.DATA.blur:
-
-                    kisze=random.choice([3,5])
-                    image=cv2.blur(image,ksize=(kisze,kisze))
 
                 if random.uniform(0, 1) < cfg.DATA.rgbshuffle:
 
