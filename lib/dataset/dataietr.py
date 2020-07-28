@@ -55,7 +55,7 @@ class data_info():
 
             split_info=line.split('| ')
 
-            
+
             source=split_info[0]
             _img_path=split_info[1]
             _label=split_info[2]
@@ -65,10 +65,11 @@ class data_info():
 
             if self.training_flag:
                 if str(source)=='usask_1' or str(source)=='inrae_1' or str(source)=='arvalis_2':
-                    for _ in range(3):
-                        current_img_path = os.path.join(self.root_path, _img_path)
+                    for _ in range(4):
+                        self.metas.append([current_img_path, current_img_label])
+                else:
 
-            self.metas.append([current_img_path,current_img_label])
+                    self.metas.append([current_img_path,current_img_label])
 
             ###some change can be made here
         logger.info('the dataset contains %d images'%(len(txt_lines)))
@@ -770,7 +771,7 @@ class DataIter():
                                   is_training=self.training_flag)
         if not self.training_flag:
             self.process_num=1
-        # ds = MultiProcessPrefetchData(ds, self.prefetch_size, self.process_num)
+        ds = MultiProcessPrefetchData(ds, self.prefetch_size, self.process_num)
         ds.reset_state()
         ds = ds.get_data()
         return ds
