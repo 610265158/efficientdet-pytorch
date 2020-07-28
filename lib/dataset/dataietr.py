@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 import traceback
 
+from albumentations import ImageOnlyTransform
+
 from lib.utils.logger import logger
 from tensorpack.dataflow import DataFromGenerator
 from tensorpack.dataflow import BatchData, MultiProcessPrefetchData
@@ -223,6 +225,58 @@ class MutiScaleBatcher(BatchData):
 
 
 
+class HueSaturationValue(ImageOnlyTransform):
+    """Randomly change hue, saturation and value of the input image.
+
+    Args:
+        hue_shift_limit ((int, int) or int): range for changing hue. If hue_shift_limit is a single int, the range
+            will be (-hue_shift_limit, hue_shift_limit). Default: (-20, 20).
+        sat_shift_limit ((int, int) or int): range for changing saturation. If sat_shift_limit is a single int,
+            the range will be (-sat_shift_limit, sat_shift_limit). Default: (-30, 30).
+        val_shift_limit ((int, int) or int): range for changing value. If val_shift_limit is a single int, the range
+            will be (-val_shift_limit, val_shift_limit). Default: (-20, 20).
+        p (float): probability of applying the transform. Default: 0.5.
+
+    Targets:
+        image
+
+    Image types:
+        uint8, float32
+    """
+
+    def __init__(self, hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20, always_apply=False, p=0.5):
+        super(HueSaturationValue, self).__init__(always_apply, p)
+        self.hue_shift_limit = A.to_tuple(hue_shift_limit)
+        self.sat_shift_limit = A.to_tuple(sat_shift_limit)
+        self.val_shift_limit = A.to_tuple(val_shift_limit)
+
+    def apply(self, img, hue_shift=0, sat_shift=0, val_shift=0, **params):
+
+
+        r = np.random.uniform(-1, 1, 3) * [hue_shift, sat_shift, val_shift] + 1  # random gains
+        hue, sat, val = cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2HSV))
+        dtype = img.dtype  # uint8
+
+        x = np.arange(0, 256, dtype=np.int16)
+        lut_hue = ((x * r[0]) % 180).astype(dtype)
+        lut_sat = np.clip(x * r[1], 0, 255).astype(dtype)
+        lut_val = np.clip(x * r[2], 0, 255).astype(dtype)
+
+        img_hsv = cv2.merge((cv2.LUT(hue, lut_hue), cv2.LUT(sat, lut_sat), cv2.LUT(val, lut_val))).astype(dtype)
+        img=cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)  # no return needed
+
+        return img
+
+    def get_params(self):
+        return {
+            "hue_shift": random.uniform(self.hue_shift_limit[0], self.hue_shift_limit[1]),
+            "sat_shift": random.uniform(self.sat_shift_limit[0], self.sat_shift_limit[1]),
+            "val_shift": random.uniform(self.val_shift_limit[0], self.val_shift_limit[1]),
+        }
+
+    def get_transform_init_args_names(self):
+        return ("hue_shift_limit", "sat_shift_limit", "val_shift_limit")
+
 class DsfdDataIter():
 
     def __init__(self, img_root_path='', ann_file=None, training_flag=True, shuffle=True):
@@ -239,9 +293,9 @@ class DsfdDataIter():
         self.no_crop_transform=A.Compose(
                                 [
                                     A.OneOf([
-                                        A.HueSaturationValue(hue_shift_limit=0.2,
-                                                             sat_shift_limit=0.2,
-                                                             val_shift_limit=0.2,
+                                        HueSaturationValue(hue_shift_limit=0.014,
+                                                             sat_shift_limit=0.68,
+                                                             val_shift_limit= 0.36,
                                                              p=0.9),
                                         A.RandomBrightnessContrast(brightness_limit=0.2,
                                                                    contrast_limit=0.2, p=0.9),
@@ -260,10 +314,10 @@ class DsfdDataIter():
                                     A.VerticalFlip(p=0.5),
                                     A.Resize(height=cfg.DATA.hin, width=cfg.DATA.win, p=1),
                                     A.OneOf([
-                                        A.HueSaturationValue(hue_shift_limit=0.2,
-                                                             sat_shift_limit=0.2,
-                                                             val_shift_limit=0.2,
-                                                             p=0.9),
+                                        HueSaturationValue(hue_shift_limit=0.014,
+                                                           sat_shift_limit=0.68,
+                                                           val_shift_limit=0.36,
+                                                           p=0.9),
                                         A.RandomBrightnessContrast(brightness_limit=0.2,
                                                                    contrast_limit=0.2, p=0.9),
                                     ], p=0.9),
