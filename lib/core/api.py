@@ -112,11 +112,8 @@ class Detector():
 
 
         result1 =self.four_rotate_call(img,input_size=1024)
-        result2 = self.four_rotate_call(img, input_size=896)
-        result3 = self.four_rotate_call(img, input_size=768)
-
-
-        result=torch.cat([result1,result2,result3],dim=0)
+        
+        result=torch.cat([result1],dim=0)
         result = result.reshape([-1, 6])
 
 
