@@ -36,9 +36,9 @@ class data_info():
         self.training_flag = training_flag
 
 
-        self.txt_fil e =txt
+        self.txt_file =txt
         self.root_path = img_root
-        self.meta s =[]
+        self.metas =[]
 
 
         self.read_txt()
@@ -47,24 +47,24 @@ class data_info():
 
     def read_txt(self):
         with open(self.txt_file) as _f:
-            txt_line s =_f.readlines()
+            txt_lines =_f.readlines()
         txt_lines.sort()
         for line in txt_lines:
-            lin e =line.rstrip()
+            line =line.rstrip()
 
 
-            split_inf o =line.split('| ')
+            split_info =line.split('| ')
 
 
-            sourc e =split_info[0]
-            _img_pat h =split_info[1]
-            _labe l =split_info[2]
+            source =split_info[0]
+            _img_path =split_info[1]
+            _label =split_info[2]
 
-            current_img_pat h =os.path.join(self.root_path ,_img_path)
-            current_img_labe l =_label
+            current_img_path =os.path.join(self.root_path ,_img_path)
+            current_img_label =_label
 
-            if self.training_flag:
-                if str(source )= ='usask_1' or str(source )= ='inrae_1' or str(source )= ='arvalis_2':
+            if self.training_flag and cfg.DATA.balance:
+                if str(source)=='usask_1' or str(source )=='inrae_1' or str(source )=='arvalis_2':
                     for _ in range(4):
                         self.metas.append([current_img_path, current_img_label])
                 else:
@@ -115,11 +115,11 @@ class MutiScaleBatcher(BatchData):
         self.remainder = remainder
         self.use_list = use_list
 
-        self.scale_rang e =scale_range
-        self.divide_siz e =divide_size
+        self.scale_range =scale_range
+        self.divide_size =divide_size
 
-        self.input_siz e =input_size
-        self.traing_fla g =is_training
+        self.input_size =input_size
+        self.traing_flag =is_training
 
 
 
@@ -134,9 +134,9 @@ class MutiScaleBatcher(BatchData):
         holder = []
         for data in self.ds:
 
-            image ,boxes_ ,klass _ =data[0] ,data[1] ,data[2]
+            image ,boxes_ ,klass_ =data[0] ,data[1] ,data[2]
 
-            dat a =[image ,boxes_ ,klass_]
+            data =[image ,boxes_ ,klass_]
             holder.append(data)
 
 
@@ -144,29 +144,29 @@ class MutiScaleBatcher(BatchData):
 
 
                 if self.scale_range is not None:
-                    cur_shape ,cur_batch_siz e =random.choice(self.scale_range)
+                    cur_shape,cur_batch_size =random.choice(self.scale_range)
 
-                    holde r =random.sample(holder ,cur_batch_size)
+                    holder =random.sample(holder ,cur_batch_size)
 
                 padd_holder = []
                 for j ,item in enumerate(holder):
                     if self.scale_range is not None:
-                        imag e =item[0]
-                        boxe s =item[1]
-                        label s =item[2]
+                        image =item[0]
+                        boxes =item[1]
+                        labels =item[2]
 
                         image, boxes = self.align_resize(image ,boxes ,target_height=cur_shape ,target_width=cur_shape)
 
                         item[0] ,item[1 ]= image, boxes
-                    imag e =np.ascontiguousarray(item[0])
+                    image =np.ascontiguousarray(item[0])
 
-                    imag e =np.transpose(image ,axes=[2 ,0 ,1]).astype(np.uint8)
-                    bo x =np.zeros(shape=[cfg.DATA.max_boxes ,4])
+                    image =np.transpose(image ,axes=[2 ,0 ,1]).astype(np.uint8)
+                    box =np.zeros(shape=[cfg.DATA.max_boxes ,4])
 
                     labels = np.zeros(shape=[cfg.DATA.max_boxes])
 
-                    num_obj s =len(item[1])
-                    if num_obj s >0:
+                    num_objs =len(item[1])
+                    if num_objs >0:
                         box[:num_objs ] =np.array(item[1])
                         labels[:num_objs ] =np.array(item[2])
                     padd_holder.append([image ,box ,labels])
@@ -177,7 +177,7 @@ class MutiScaleBatcher(BatchData):
 
                 del padd_holder[:]
 
-                holde r =[]
+                holder =[]
 
     def place_image(self ,img_raw ,target_height ,target_width):
 
@@ -185,11 +185,11 @@ class MutiScaleBatcher(BatchData):
         raw_height = img_raw.shape[0]
         raw_width = img_raw.shape[1]
 
-        start_ h =random.randint(0 ,target_heigh t -raw_height)
-        start_ w =random.randint(0 ,target_widt h -raw_width)
+        start_h =random.randint(0 ,target_height -raw_height)
+        start_w =random.randint(0 ,target_width -raw_width)
 
         img_fill = np.zeros([target_height ,target_width ,channel], dtype=img_raw.dtype)
-        img_fill[start_h:start_ h +raw_height ,start_w:start_ w +raw_width ] =img_raw
+        img_fill[start_h:start_h +raw_height ,start_w:start_w +raw_width ] =img_raw
 
         return img_fill ,start_w ,start_h
 
@@ -712,25 +712,26 @@ class DsfdDataIter():
                 boxes_ = np.clip(boxes_, 0, cfg.DATA.hin)
 
                 ###clean the box
-                filtered_box = []
-                filtered_klass = []
-                for bb in range(boxes_.shape[0]):
-                    cur_box = boxes_[bb, ...]
-                    cur_kalss = klasses_[bb]
-                    bbox_width = cur_box[2] - cur_box[0]
-                    bbox_height = cur_box[3] - cur_box[1]
+                if cfg.DATA.clean_box:
+                    filtered_box = []
+                    filtered_klass = []
+                    for bb in range(boxes_.shape[0]):
+                        cur_box = boxes_[bb, ...]
+                        cur_kalss = klasses_[bb]
+                        bbox_width = cur_box[2] - cur_box[0]
+                        bbox_height = cur_box[3] - cur_box[1]
 
-                    if bbox_width * bbox_height < 5 * 5:
-                        continue
-                    elif bbox_width / bbox_height < 0.1 or bbox_width / bbox_height > 10:
+                        if bbox_width * bbox_height < 5 * 5:
+                            continue
+                        elif bbox_width / bbox_height < 0.1 or bbox_width / bbox_height > 10:
 
-                        continue
-                    else:
-                        filtered_box.append(cur_box)
-                        filtered_klass.append(cur_kalss)
+                            continue
+                        else:
+                            filtered_box.append(cur_box)
+                            filtered_klass.append(cur_kalss)
 
-                boxes_ = np.array(filtered_box)
-                klasses_ = np.array(filtered_klass)
+                    boxes_ = np.array(filtered_box)
+                    klasses_ = np.array(filtered_klass)
 
                 ##### below process is litlle bit ugly, but it is ok now
                 if klasses_.shape[0] == 0:

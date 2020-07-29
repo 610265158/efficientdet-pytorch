@@ -70,7 +70,8 @@ config.DATA.rgbshuffle=0.0
 config.DATA.randomquality=0.0
 config.DATA.crazy_mix=0.0
 config.DATA.use_cluster_anchor=False
-
+config.DATA.clean_box=False
+config.DATA.balance=False
 config.MODEL = edict()
 config.MODEL.model_name='tf_efficientdet_d2'
 config.MODEL.model_path = './models/'                                        ## save directory
