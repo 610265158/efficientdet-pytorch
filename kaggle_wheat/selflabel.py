@@ -31,7 +31,11 @@ model_names=[argmodel_name]
 
 is_show=args.is_show
 
-data_dir='../global-wheat-detection/train'
+data_dir='../global-wheat-detection/test/'
+selflabel_dir='./selflabel'
+if not os.access(selflabel_dir,os.F_OK):
+    os.mkdir(selflabel_dir)
+
 
 
 image_list=os.listdir(data_dir)
@@ -44,7 +48,7 @@ def process_det(det, score_threshold=0.25):
     scores = det[indexes,4]
     return boxes, scores
 
-def get_prediction():
+def get_prediction(angle=15):
     all_predictions = {}
 
     for model_name in model_names:
@@ -55,14 +59,21 @@ def get_prediction():
 
             cur_image_path=os.path.join(data_dir,image_name)
 
-
             image=cv2.imread(cur_image_path,-1)
 
-            image,_=Rotate_aug(image,15)
+            image,_=Rotate_aug(image,angle)
+
+
+            ###save there
+            save_name=os.path.join(selflabel_dir,str(angle)+'_'+image_name)
+            cv2.imwrite(save_name,image)
+
+
+            image=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
 
             image_show=np.array(image)
 
-            cur_result = detector(image)
+            cur_result = detector(image,512)
 
             if image_name in all_predictions:
                 pass
@@ -101,13 +112,15 @@ def calculate_final_score(
         skip_box_thr,
         method,  # weighted_boxes_fusion, nms, soft_nms, non_maximum_weighted
         sigma=0.5,
+        angle=15
 ):
-    final_scores = []
+
+
+    selflabel_file= open('selflabel.txt','a')
 
     for k,v in all_predictions.items():
 
-        gt_boxes = all_predictions[k]['gt_boxes'].copy()
-        image_id = k
+
         folds_boxes, folds_scores, folds_labels = [], [], []
         for model_name in model_names:
             pred_boxes = all_predictions[k]['pred_boxes_with_model_%s' % (model_name)].copy()
@@ -129,34 +142,32 @@ def calculate_final_score(
                                                          iou_thr=iou_thr, skip_box_thr=skip_box_thr)
         else:
             raise NotImplementedError
-        image_precision = calculate_image_precision(gt_boxes, boxes, thresholds=iou_thresholds, form='pascal_voc')
-        final_scores.append(image_precision)
 
-    return np.mean(final_scores)
+
+        image_name = k
+        cur_label_message='nan| '+os.path.join(selflabel_dir,str(angle)+'_'+image_name+'|')
+        ####make the txt
+        for bb in range(boxes.shape[0]):
+
+            curbox = boxes[bb]
+            cur_box_info = [float(x) for x in curbox]
+
+            cur_box_info = " " + str(cur_box_info[0]) + ',' + str(cur_box_info[1]) + ',' + \
+                           str( cur_box_info[2]) + "," + str( cur_box_info[3]) + ',1'
+            cur_label_message = cur_label_message + cur_box_info
+
+        cur_label_message += '\n'
+        selflabel_file.write(cur_label_message)
+
+
 
 if __name__=='__main__':
-    all_predictions=get_prediction()
+
+    for angle in [15,30,45,60,75]:
+        all_predictions=get_prediction(angle=angle)
 
 
-    ### from kagglenotebook, best score with 0.430 0.430
-    score=calculate_final_score(all_predictions,0.430,0.430,'weighted_boxes_fusion')
 
-    best_score=0.
-    best_thrs=0.
+        score=calculate_final_score(all_predictions,0.5,0.430,'weighted_boxes_fusion',angle=angle)
 
 
-    scores=[x /100 for x in range(30,70)]
-
-    for thrs in tqdm(scores):
-        score=calculate_final_score(all_predictions,0.430,thrs,'weighted_boxes_fusion')
-
-        if score>best_score:
-            best_score=score
-            best_thrs=thrs
-
-    print('-'*30)
-
-    print('best score thrs: ',best_thrs)
-    print('best score: ',best_score)
-
-    print('-' * 30)
