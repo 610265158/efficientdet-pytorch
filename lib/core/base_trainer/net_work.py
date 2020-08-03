@@ -351,7 +351,7 @@ class Train(object):
       #           },iters=epoch,tag=current_model_saved_name)
 
 
-    current_model_saved_name = './models/final_%d_val_loss%.6f.pth' % (epoch, summary_loss.avg)
+    current_model_saved_name = './models/final.pth'
 
     logger.info('final model saved to %s' % current_model_saved_name)
 
