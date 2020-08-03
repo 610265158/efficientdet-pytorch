@@ -124,8 +124,8 @@ class Train(object):
 
     self.val_ds = val_ds
 
-    self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,mode='min',factor=0.5, patience=4,verbose=True,min_lr=1.e-6)
-    # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR( self.optimizer, self.epochs,eta_min=1.e-6)
+    #self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer,mode='min',factor=0.5, patience=4,verbose=True,min_lr=1.e-6)
+    self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR( self.optimizer, self.epochs,eta_min=1.e-6)
 
     self.accumulation_steps=cfg.TRAIN.accumulation_steps
 
@@ -327,8 +327,8 @@ class Train(object):
                                    epoch, summary_loss.avg, (time.time() - t))
           logger.info(val_epoch_log_message)
 
-      # self.scheduler.step()
-      self.scheduler.step(summary_loss.avg)
+      self.scheduler.step()
+      #self.scheduler.step(summary_loss.avg)
       #### save the model every end of epoch
 
       current_model_saved_name='./models/epoch_%d_val_loss%.6f.pth'%(epoch,summary_loss.avg)
